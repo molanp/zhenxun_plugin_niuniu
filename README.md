@@ -1,4 +1,4 @@
-# zhenxun_plugins_niuniu
+# zhenxun_plugin_niuniu
 真寻群内小游戏插件-牛牛大作战(误
 
 ## 使用方法
