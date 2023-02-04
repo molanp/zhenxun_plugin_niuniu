@@ -16,8 +16,6 @@ from .data_source import (
   get_all_users
 )
 from PIL import Image
-import os
-import ujson
 import time
 import base64
 import random
