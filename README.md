@@ -1,6 +1,8 @@
 # zhenxun_plugin_niuniu
 真寻群内小游戏插件-牛牛大作战(误
 
+# 本插件无需数据库！
+
 ## 使用方法
 下载压缩包，解压并放入`extensive_plugin`文件夹或其他自定义文件夹中
 
