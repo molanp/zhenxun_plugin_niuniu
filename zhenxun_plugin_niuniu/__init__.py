@@ -256,7 +256,7 @@ async def _(event: GroupMessageEvent, state: T_State):
       ])
     elif 50 < my_long:
       result = random.choice([
-        f"已经突破天际了嘛...当前牛子长度{my_long}cm"
+        f"已经突破天际了嘛...当前牛子长度{my_long}cm",
         f"唔...这玩意应该不会变得比我高吧？当前牛子长度{my_long}cm"
       ])
   except KeyError:
