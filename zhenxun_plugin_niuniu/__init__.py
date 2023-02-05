@@ -34,20 +34,21 @@ usage：
 """.strip()
 __plugin_des__ = "牛子大作战(误"
 __plugin_type__ = ("群内小游戏",)
-__plugin_cmd__ = ["注册牛子", "jj/JJ/Jj/jJ", "我的牛子", "牛子排行", "打胶", "牛牛大作战"]
+__plugin_cmd__ = ["注册牛子", "jj/JJ/Jj/jJ", "我的牛子", "牛子长度排行","牛子深度排行", "打胶", "牛牛大作战"]
 __plugin_version__ = 0.1
 __plugin_author__ = "molanp"
 __plugin_settings__ = {
     "level": 5,
     "default_status": True,
     "limit_superuser": False,
-    "cmd": ['注册牛子', 'jj', 'JJ', 'Jj', 'jJ', '我的牛子', '牛子排行', '打胶', '牛牛大作战'],
+    "cmd": ['注册牛子', 'jj', 'JJ', 'Jj', 'jJ', '我的牛子', '牛子长度排行','牛子深度排行', '打胶', '牛牛大作战'],
 }
 
 niuzi_register = on_command("注册牛子", priority=5, block=True)
 niuzi_fencing = on_command("jj", aliases={'JJ', 'Jj', 'jJ'}, priority=5, block=True)
 niuzi_my = on_command("我的牛子", priority=5, block=True)
-niuzi_ranking = on_command("牛子排行", priority=5, block=True)
+niuzi_ranking = on_command("牛子长度排行", priority=5, block=True)
+niuzi_ranking_e = on_command("牛子深度排行", priority=5, block=True)
 niuzi_hit_glue = on_command("打胶", priority=5, block=True)
 
 group_user_jj = {}
@@ -275,12 +276,33 @@ async def _(event: GroupMessageEvent, arg: Message = CommandArg()):
     all_user_id = []
     all_user_data = []
     for user_id, user_data in all_users.items():
-      all_user_id.append(int(user_id))
-      all_user_data.append(user_data)
+      if user_data > 0:
+        all_user_id.append(int(user_id))
+        all_user_data.append(user_data)
     
-    rank_image = await init_rank("牛子长度排行榜", all_user_id, all_user_data, event.group_id, num)
+    rank_image = await init_rank("牛子长度排行榜-单位cm", all_user_id, all_user_data, event.group_id, num)
     if rank_image:
         await niuzi_ranking.finish(image(b64=rank_image.pic2bs4()))
+        
+@niuzi_ranking_e.handle()
+async def _(event: GroupMessageEvent, arg: Message = CommandArg()):
+    num = arg.extract_plain_text().strip()
+    if is_number(num) and 51 > int(num) > 10:
+        num = int(num)
+    else:
+        num = 10
+    all_users = get_all_users(str(event.group_id))
+    all_user_id = []
+    all_user_data = []
+    for user_id, user_data in all_users.items():
+      if user_data < 0:
+        all_user_id.append(int(user_id))
+        all_user_data.append(float(str(user_data)[1:]))
+    
+    rank_image = await init_rank("牛子深度排行榜-单位cm", all_user_id, all_user_data, event.group_id, num)
+    if rank_image:
+        await niuzi_ranking.finish(image(b64=rank_image.pic2bs4()))
+
 
 @niuzi_hit_glue.handle()
 async def _(event: GroupMessageEvent, state: T_State):
