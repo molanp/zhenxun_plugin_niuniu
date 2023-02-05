@@ -1,6 +1,7 @@
 from nonebot import on_command
 from nonebot.params import CommandArg, Arg, ArgStr
-from utils.data_utils import init_rank
+from .util import init_rank
+from utils.utils import is_number
 from utils.message_builder import image , at
 from utils.image_utils import text2image
 from nonebot.typing import T_State
@@ -10,12 +11,12 @@ from nonebot.adapters.onebot.v11 import (
   MessageEvent,
   MessageSegment,
   Message)
-from .data_source import (
-  readInfo,
-  random_long,
-  get_all_users
-)
+from .data_source import random_long
 from PIL import Image
+from io import BytesIO
+from decimal import Decimal as de
+import os
+import ujson
 import time
 import base64
 import random
@@ -33,14 +34,14 @@ usage：
 """.strip()
 __plugin_des__ = "牛子大作战(误"
 __plugin_type__ = ("群内小游戏",)
-__plugin_cmd__ = ["注册牛子", "jj/JJ/Jj/jJ", "我的牛子", "牛子排行", "打胶"]
+__plugin_cmd__ = ["注册牛子", "jj/JJ/Jj/jJ", "我的牛子", "牛子排行", "打胶", "牛牛大作战"]
 __plugin_version__ = 0.1
 __plugin_author__ = "molanp"
 __plugin_settings__ = {
     "level": 5,
     "default_status": True,
     "limit_superuser": False,
-    "cmd": ['注册牛子', 'jj', '我的牛子', '牛子排行', '打胶', 'JJ', 'Jj', 'jJ'],
+    "cmd": ['注册牛子', 'jj', 'JJ', 'Jj', 'jJ', '我的牛子', '牛子排行', '打胶', '牛牛大作战'],
 }
 
 niuzi_register = on_command("注册牛子", priority=5, block=True)
@@ -52,6 +53,23 @@ niuzi_hit_glue = on_command("打胶", priority=5, block=True)
 group_user_jj = {}
 group_hit_glue = {}
 
+path = os.path.dirname(__file__)
+
+def readInfo(file, info=None):
+    with open(os.path.join(path, file), "r", encoding="utf-8") as f:
+        context = f.read()
+        if info != None:
+            with open(os.path.join(path, file), "w", encoding="utf-8") as f:
+                f.write(ujson.dumps(info, indent=4, ensure_ascii=False))
+            with open(os.path.join(path, file), "r", encoding="utf-8") as f:
+                data = f.read()
+            return {"data": ujson.loads(context.strip())}
+        else:
+            return ujson.loads(context.strip())
+
+def get_all_users(group):
+    group = readInfo("data/long.json")[group]
+    return group
 
 @niuzi_register.handle()
 async def _(event: GroupMessageEvent, state: T_State):
@@ -70,7 +88,7 @@ async def _(event: GroupMessageEvent, state: T_State):
   except KeyError:
     content[group][qq] = long
     readInfo('data/long.json', content)
-    await niuzi_register.finish(Message(f"注册牛子成功，当前长度{long}"), at_sender=True)
+    await niuzi_register.finish(Message(f"注册牛子成功，当前长度{long}cm"), at_sender=True)
 
 @niuzi_fencing.handle()
 async def _(event: GroupMessageEvent, state: T_State):
@@ -101,31 +119,30 @@ async def _(event: GroupMessageEvent, state: T_State):
   group_user_jj[group][qq]['time'] = time.time()
   #
   msg = event.get_message()
-  msg_text = args.extract_plain_text().strip()
   content = readInfo("data/long.json")
-  at = []
+  at_list = []
   for msg_seg in msg:
     if msg_seg.type == "at":
-      at.append(msg_seg.data["qq"])
+      at_list.append(msg_seg.data["qq"])
   try:
-    my_long = content[group][qq]
-    if len(at) >= 1:
-      if len(at) >= 2:
+    my_long = de(str(content[group][qq]))
+    at = str(at_list[0])
+    if len(at_list) >= 1:
+      if len(at_list) >= 2:
         result = "一战多？你的小身板扛得住吗？"
-      else:
-        at =at[0]
+      elif at != qq:
         try:
-          opponent_long = content[group][at]
+          opponent_long = de(str(content[group][at]))
           if opponent_long > my_long:
             probability = random.randint(1, 100)
             if 0 < probability <= 45:
               reduce = random_long()
               my_long = my_long - reduce
               if my_long < 0:
-                resule = random.choice([
-                  "哦吼！？看来你的牛子因为击剑而凹进去了呢！目前深度{reduce}cm！",
-                  "由于对方击剑技术过于高超，造成你的牛子凹了进去呢！当前深度是{reduce}cm哦！",
-                  "好惨啊，本来就不长的牛子现在凹进去了呢！凹进去了{reduce}cm呢！"
+                result = random.choice([
+                  f"哦吼！？看来你的牛子因为击剑而凹进去了呢！凹进去了{reduce}cm！",
+                  f"由于对方击剑技术过于高超，造成你的牛子凹了进去呢！凹进去了深{reduce}cm哦！",
+                  f"好惨啊，本来就不长的牛子现在凹进去了呢！凹进去了{reduce}cm呢！"
                 ])
               else:
                 result = f"对方以绝对的长度让你屈服了呢！你的长度减少{reduce}cm，当前长度{my_long}cm！对方增加相应的长度"
@@ -139,9 +156,9 @@ async def _(event: GroupMessageEvent, state: T_State):
               opponent_long = opponent_long - reduce
               my_long = my_long + reduce
               if my_long < 0:
-                resule = random.choice([
-                  "哦吼！？你的牛子在长大欸！目前深度{reduce}cm！",
-                  "牛子凹进去的深度变浅了欸！当前深度{reduce}cm！"
+                result = random.choice([
+                  f"哦吼！？你的牛子在长大欸！长大了{reduce}cm！",
+                  f"牛子凹进去的深度变浅了欸！变浅了{reduce}cm！"
                 ])
               else:
                 result = f"虽然你不够长，但是你逆袭了呢！你的长度增加{reduce}cm，当前长度{my_long}cm！对方减少相应的长度"
@@ -149,16 +166,16 @@ async def _(event: GroupMessageEvent, state: T_State):
               content[group][at] = opponent_long
               readInfo('data/long.json',content)
               
-          if my_long > opponent_long:
+          elif my_long > opponent_long:
             probability = random.randint(1, 100)
             if 0 < probability <= 80:
               reduce = random_long()
               opponent_long = opponent_long - reduce
               my_long = my_long + reduce
               if my_long < 0:
-                resule = random.choice([
-                  "哦吼！？你的牛子在长大欸！目前深度{reduce}cm！",
-                  "牛子凹进去的深度变浅了欸！当前深度{reduce}cm！"
+                result = random.choice([
+                  f"哦吼！？你的牛子在长大欸！长大了{reduce}cm！",
+                  f"牛子凹进去的深度变浅了欸！变浅了{reduce}cm！"
                 ])
               else:
                 result = f"你以绝对的长度让对方屈服了呢！你的长度增加{reduce}cm，当前长度{my_long}cm！对方减少相应的长度"
@@ -169,10 +186,10 @@ async def _(event: GroupMessageEvent, state: T_State):
               reduce = random_long()
               my_long = my_long - reduce
               if my_long < 0:
-                resule = random.choice([
-                  "哦吼！？看来你的牛子因为击剑而凹进去了呢！目前深度{reduce}cm！",
-                  "由于对方击剑技术过于高超，造成你的牛子凹了进去呢！当前深度{reduce}cm！",
-                  "好惨啊，本来就不长的牛子现在凹进去了呢！凹进去了{reduce}cm！"
+                result = random.choice([
+                  f"哦吼！？看来你的牛子因为击剑而凹进去了呢！目前深度{reduce}cm！",
+                  f"由于对方击剑技术过于高超，造成你的牛子凹了进去呢！当前深度{reduce}cm！",
+                  f"好惨啊，本来就不长的牛子现在凹进去了呢！凹进去了{reduce}cm！"
                 ])
               else:
                 result = f"虽然你比较长，但是对方逆袭了呢！你的长度减少{reduce}cm，当前长度{my_long}cm！对方增加相应的长度"
@@ -182,9 +199,12 @@ async def _(event: GroupMessageEvent, state: T_State):
               readInfo('data/long.json',content)
         except KeyError():
           result = "对方还没有牛子呢，你不能和ta击剑！"
+      else:
+        result = "不能和自己击剑哦！"
     else:
       result = "你要和谁击剑？你自己吗？"
   except KeyError:
+    del group_user_jj[group][qq]['time']
     result = "你还没有牛子呢！不能击剑！"
   finally:
     await niuzi_fencing.finish(Message(result),at_sender=True)
@@ -208,7 +228,7 @@ async def _(event: GroupMessageEvent, state: T_State):
       result = random.choice([
         f"你已经是一名女生了呢，当前深度{my_long}cm",
         f"从女生的角度来说，你发育良好(,当前深度{my_long}cm",
-        f"你醒啦？你已经是一名女孩子啦！深度足足有{my_long}呢！",
+        f"你醒啦？你已经是一名女孩子啦！深度足足有{my_long}cm呢！",
         f"唔....可以放进去一根手指了都....当前深度{my_long}cm"
       ])
     elif -10 < my_long <= 0:
@@ -251,11 +271,11 @@ async def _(event: GroupMessageEvent, arg: Message = CommandArg()):
         num = int(num)
     else:
         num = 10
-    all_users = get_all_users(event.group_id)
+    all_users = get_all_users(str(event.group_id))
     all_user_id = []
     all_user_data = []
     for user_id, user_data in all_users.items():
-      all_user_id.append(user_id)
+      all_user_id.append(int(user_id))
       all_user_data.append(user_data)
     
     rank_image = await init_rank("牛子长度排行榜", all_user_id, all_user_data, event.group_id, num)
@@ -279,8 +299,8 @@ async def _(event: GroupMessageEvent, state: T_State):
     group_hit_glue[group][qq] = {}
   try:
     time_pass = int(time.time() - group_hit_glue[group][qq]['time'])
-    if time_pass < 1800:
-      time_rest = 1800 - time_pass
+    if time_pass < 180:
+      time_rest = 180 - time_pass
       glue_refuse = [
         f'才过去了{time_pass}s时间,你就又要打胶了，身体受得住吗',
         f'不行不行，你的身体会受不了的，歇{time_rest}s再来吧'
@@ -290,7 +310,8 @@ async def _(event: GroupMessageEvent, state: T_State):
     pass
   group_hit_glue[group][qq]['time'] = time.time()
   try:
-    my_long = content[group][qq]
+    content = readInfo("data/long.json")
+    my_long = de(str(content[group][qq]))
     probability = random.randint(1, 100)
     if 0 < probability <= 40:
       reduce = random_long()
@@ -308,22 +329,25 @@ async def _(event: GroupMessageEvent, state: T_State):
       reduce = random_long()
       my_long = my_long - reduce
       if my_long < 0:
-        resule = random.choice([
-          "哦吼！？看来你的牛子凹进去了呢！深度{reduce}cm！",
-          "你因为打胶过度导致牛子凹了进去呢！当前深度{reduce}cm！"
+        result = random.choice([
+          f"哦吼！？看来你的牛子凹进去了{reduce}cm呢！",
+          f"你因为打胶过度导致牛子凹了进去{reduce}cm呢！"
         ])
       else:
         result = random.choice([
           f"阿哦，你过度打胶，牛子缩短{reduce}cm了呢！",
-          f"你的牛子变长了很多，你很激动地继续打胶，造成牛子不但没增加还缩短{reduce}了呢！"
+          f"你的牛子变长了很多，你很激动地继续打胶，造成牛子不但没增加还缩短{reduce}cm了呢！"
           ])
+    content[group][qq] = my_long
+    readInfo('data/long.json',content)
   except KeyError:
+    del group_hit_glue[group][qq]['time']
     result = random.choice([
       "你还没有牛子呢！不能打胶！",
       "无牛子，打胶不要的"
       ])
   finally:
-    await niuzi_hit_glue.finish(Message(result),at_Sender=True)
+    await niuzi_hit_glue.finish(Message(result),at_sender=True)
 
 def pic2b64(pic: Image) -> str:
     """

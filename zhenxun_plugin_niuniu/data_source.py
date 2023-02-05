@@ -1,18 +1,5 @@
-import random, ujson ,os
-
-path = os.path.dirname(__file__)
-
-def readInfo(file, info=None):
-    with open(os.path.join(path, file), "r", encoding="utf-8") as f:
-        context = f.read()
-        if info != None:
-            with open(os.path.join(path, file), "w", encoding="utf-8") as f:
-                f.write(ujson.dumps(info, indent=4, ensure_ascii=False))
-            with open(os.path.join(path, file), "r", encoding="utf-8") as f:
-                data = f.read()
-            return {"data": ujson.loads(context.strip())}
-        else:
-            return ujson.loads(context.strip())
+import random
+from decimal import Decimal as de
 
 def random_long():
     long = random.randint(1,9)
@@ -28,9 +15,5 @@ def random_long():
         .80,.81,.82,.83,.84,.85,.86,.87,.88,.89,
         .90,.91,.92,.93,.94,.95,.96,.97,.98,.99
     ])
-    return float(f"{long}{long_}")
-
-def get_all_users(group):
-    group = readInfo("data/long.json")[group]
-    return group
+    return de(str(long+long_))
     
