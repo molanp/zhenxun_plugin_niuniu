@@ -127,8 +127,8 @@ async def _(event: GroupMessageEvent, state: T_State):
       at_list.append(msg_seg.data["qq"])
   try:
     my_long = de(str(content[group][qq]))
-    at = str(at_list[0])
     if len(at_list) >= 1:
+      at = str(at_list[0])
       if len(at_list) >= 2:
         result = "一战多？你的小身板扛得住吗？"
       elif at != qq:
