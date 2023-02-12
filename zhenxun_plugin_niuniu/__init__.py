@@ -281,9 +281,12 @@ async def _(event: GroupMessageEvent, arg: Message = CommandArg()):
         all_user_id.append(int(user_id))
         all_user_data.append(user_data)
     
-    rank_image = await init_rank("牛子长度排行榜-单位cm", all_user_id, all_user_data, event.group_id, num)
-    if rank_image:
-        await niuzi_ranking.finish(image(b64=rank_image.pic2bs4()))
+    if len(all_user_id)!=0: 
+      rank_image = await init_rank("牛子长度排行榜-单位cm", all_user_id, all_user_data, event.group_id, num)
+      if rank_image:
+          await niuzi_ranking.finish(image(b64=rank_image.pic2bs4()))
+    else: 
+      await niuzi_ranking.finish(Message("暂无此排行榜数据...", at_sender=True))
         
 @niuzi_ranking_e.handle()
 async def _(event: GroupMessageEvent, arg: Message = CommandArg()):
@@ -300,9 +303,12 @@ async def _(event: GroupMessageEvent, arg: Message = CommandArg()):
         all_user_id.append(int(user_id))
         all_user_data.append(float(str(user_data)[1:]))
     
-    rank_image = await init_rank("牛子深度排行榜-单位cm", all_user_id, all_user_data, event.group_id, num)
-    if rank_image:
-        await niuzi_ranking.finish(image(b64=rank_image.pic2bs4()))
+    if len(all_user_id)!= 0: 
+      rank_image = await init_rank("牛子深度排行榜-单位cm", all_user_id, all_user_data, event.group_id, num)
+      if rank_image:
+          await niuzi_ranking_e.finish(image(b64=rank_image.pic2bs4()))
+    else: 
+      await niuzi_ranking_e.finish(Message("暂无此排行榜数据..."), at_sender=True)
 
 
 @niuzi_hit_glue.handle()
