@@ -199,7 +199,7 @@ async def _(event: GroupMessageEvent, state: T_State):
               content[group][qq] = my_long
               content[group][at] = opponent_long
               readInfo('data/long.json',content)
-        except KeyError():
+        except KeyError:
           result = "对方还没有牛子呢，你不能和ta击剑！"
       else:
         result = "不能和自己击剑哦！"
