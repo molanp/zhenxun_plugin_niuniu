@@ -133,8 +133,8 @@ async def _(event: GroupMessageEvent, state: T_State):
         result = "一战多？你的小身板扛得住吗？"
       elif at != qq:
         try:
-          group_user_jj[group][qq]['time'] = time.time()
           opponent_long = de(str(content[group][at]))
+          group_user_jj[group][qq]['time'] = time.time()
           if opponent_long > my_long:
             probability = random.randint(1, 100)
             if 0 < probability <= 45:
@@ -338,9 +338,9 @@ async def _(event: GroupMessageEvent, state: T_State):
   except KeyError:
     pass
   try:
-    group_hit_glue[group][qq]['time'] = time.time()
     content = readInfo("data/long.json")
     my_long = de(str(content[group][qq]))
+    group_hit_glue[group][qq]['time'] = time.time()
     probability = random.randint(1, 100)
     if 0 < probability <= 40:
       reduce = random_long()
