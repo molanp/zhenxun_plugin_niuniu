@@ -137,7 +137,7 @@ async def _(event: GroupMessageEvent, state: T_State):
           group_user_jj[group][qq]['time'] = time.time()
           if opponent_long > my_long:
             probability = random.randint(1, 100)
-            if 0 < probability <= 45:
+            if 0 < probability <= 69:
               reduce = random_long()
               my_long = my_long - reduce
               if my_long < 0:
