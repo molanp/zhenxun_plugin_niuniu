@@ -1,6 +1,5 @@
 from nonebot import on_command
 from nonebot.params import CommandArg
-from .until import init_rank
 from utils.utils import is_number
 from utils.message_builder import image
 from utils.image_utils import text2image
