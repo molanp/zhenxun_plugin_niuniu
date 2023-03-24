@@ -7,6 +7,7 @@ from PIL import Image
 from io import BytesIO
 from decimal import Decimal as de
 from models.group_member_info import GroupInfoUser
+from services import logger
 from utils.image_utils import BuildMat
 from configs.path_config import IMAGE_PATH
 from typing import List, Union
@@ -39,7 +40,7 @@ def fence(rd):
     """
     return de(abs(float(rd)*random.random())).quantize(de("0.00"))
 
-def readInfo(file, info=None):
+async def readInfo(file, info=None):
     """
     读取文件信息
     """
@@ -48,18 +49,18 @@ def readInfo(file, info=None):
         if info != None:
             with open(os.path.join(path, file), "w", encoding="utf-8") as f:
                 f.write(ujson.dumps(info, indent=4, ensure_ascii=False))
-            return {"data": ujson.loads(context.strip())}
+            return True
         else:
             return ujson.loads(context.strip())
 
-def get_all_users(group):
+async def get_all_users(group):
     """
     获取全部用户及长度
     """
-    group = readInfo("data/long.json")[group]
-    return group
+    group_ = await readInfo("data/long.json")
+    return group_[group]
 
-def fencing(my, oppo, at, qq, group, content):
+async def fencing(my, oppo, at, qq, group, content):
     """
     击剑判断
 
@@ -78,28 +79,24 @@ def fencing(my, oppo, at, qq, group, content):
         result = f"对方身为魅魔诱惑了你，你被吞噬了全部长度！当前长度{my}cm!"
         content[group][qq] = my
         content[group][at] = oppo
-        readInfo('data/long.json', content)
     elif oppo >= 100 and my > 0 and 10 < probability <= 20:
         oppo = oppo + my
         my = 0
         result = f"对方以牛头人的荣誉吞噬了你的全部长度！当前长度{my}cm!"
         content[group][qq] = my
         content[group][at] = oppo
-        readInfo('data/long.json', content)
     elif my <= -100 and oppo > 0 and 10 < probability <= 20:
         my = oppo + my
         oppo = 0
         result = f"你身为魅魔诱惑了对方，吞噬了对方全部长度！当前长度{my}cm!"
         content[group][qq] = my
         content[group][at] = oppo
-        readInfo('data/long.json', content)
     elif my >= 100 and oppo > 0 and 10 < probability <= 20:
         my = oppo + my
         oppo = 0
         result = f"你以牛头人的荣誉吞噬了对方的全部长度！当前长度{oppo}cm!"
         content[group][qq] = my
         content[group][at] = oppo
-        readInfo('data/long.json', content)
     else:
         if oppo > my:
             probability = random.randint(1, 100)
@@ -117,8 +114,6 @@ def fencing(my, oppo, at, qq, group, content):
                 oppo = oppo + reduce
                 content[group][qq] = my
                 content[group][at] = oppo
-                readInfo('data/long.json', content)
-
             else:
                 reduce = fence(oppo)
                 oppo = oppo - reduce
@@ -132,7 +127,6 @@ def fencing(my, oppo, at, qq, group, content):
                     result = f"虽然你不够长，但是你逆袭了呢！你的长度增加{format(reduce,'.2f')}cm，当前长度{format(my,'.2f')}cm！"
                 content[group][qq] = my
                 content[group][at] = oppo
-                readInfo('data/long.json', content)
         elif my > oppo:
             probability = random.randint(1, 100)
             if 0 < probability <= 80:
@@ -148,7 +142,6 @@ def fencing(my, oppo, at, qq, group, content):
                     result = f"你以绝对的长度让对方屈服了呢！你的长度增加{format(reduce,'.2f')}cm，当前长度{format(my,'.2f')}cm！"
                 content[group][qq] = my
                 content[group][at] = oppo
-                readInfo('data/long.json', content)
             else:
                 reduce = fence(my)
                 my = my - reduce
@@ -163,7 +156,6 @@ def fencing(my, oppo, at, qq, group, content):
                 oppo = oppo + reduce
                 content[group][qq] = my
                 content[group][at] = oppo
-                readInfo('data/long.json', content)
         else:
             probability = random.randint(1, 100)
             reduce = fence(oppo)
@@ -179,7 +171,6 @@ def fencing(my, oppo, at, qq, group, content):
                     result = f"你以技艺的高超让对方屈服啦！你的长度增加{format(reduce,'.2f')}cm，当前长度{format(my,'.2f')}cm！"
                 content[group][qq] = my
                 content[group][at] = oppo
-                readInfo('data/long.json', content)
             else:
                 my = my - reduce
                 if my < 0:
@@ -193,8 +184,39 @@ def fencing(my, oppo, at, qq, group, content):
                 oppo = oppo + reduce
                 content[group][qq] = my
                 content[group][at] = oppo
-                readInfo('data/long.json', content)
+    await readInfo('data/long.json', content)
     return result
+
+async def del_member_info(user_id, group_id):
+    """
+    说明:
+        清理退群用户数据
+
+    Args:
+        group (_type_): qq群号
+    Returns:
+        None
+    """
+    group_data = await readInfo("data/long.json")
+    group_data = group_data[group_id]
+    del group_data[user_id]
+    logger.info(f"群聊GROUP {group_id} 清理退群用户数据{user_id}完成...")
+    await readInfo('data/long.json', group_data)
+    
+async def del_group_info(group_id):
+    """
+    说明:
+        清理退群数据
+
+    Args:
+        group (_type_): qq群号
+    Returns:
+        None
+    """
+    group_data = await readInfo("data/long.json")
+    del group_data[group_id]
+    logger.info(f"群聊GROUP {group_id} 已退出，清除群聊数据成功...")
+    await readInfo('data/long.json', group_data)
 
 async def init_rank(
     title: str, all_user_id: List[int], all_user_data: List[float], group_id: int, total_count: int = 10
@@ -230,7 +252,7 @@ async def init_rank(
         None, _init_rank_graph, title, _uname_lst, _num_lst
     )
 
-def _init_rank_graph(
+async def _init_rank_graph(
     title: str, _uname_lst: List[str], _num_lst: List[Union[int, float]]
 ) -> BuildMat:
     """

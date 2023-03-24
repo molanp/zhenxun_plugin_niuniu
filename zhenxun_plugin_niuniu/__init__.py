@@ -1,10 +1,11 @@
-from nonebot import on_command
+from nonebot import on_command, on_notice
 from nonebot.params import CommandArg
 from utils.utils import is_number
 from utils.message_builder import image
 from utils.image_utils import text2image
 from nonebot.adapters.onebot.v11 import (
   GroupMessageEvent,
+  GroupDecreaseNoticeEvent,
   Message)
 from .data_source import *
 from decimal import Decimal as de
@@ -37,6 +38,7 @@ __plugin_settings__ = {
     "cmd": ['注册牛子', 'jj', 'JJ', 'Jj', 'jJ', '我的牛子', '牛子长度排行','牛子深度排行', '打胶', '牛牛大作战'],
 }
 
+group_user_kick = on_notice(priority=1, block=False)
 niuzi_register = on_command("注册牛子", priority=5, block=True)
 niuzi_fencing = on_command("jj", aliases={'JJ', 'Jj', 'jJ'}, priority=5, block=True)
 niuzi_my = on_command("我的牛子", priority=5, block=True)
@@ -53,12 +55,20 @@ if not os.path.exists(f"{path}/data"):
     os.makedirs(f"{path}/data")
     with open(os.path.join(path, "data/long.json"), "w", encoding="utf-8") as f:
       f.write('{}')
+      
+@group_user_kick.handle()
+async def _(event: GroupDecreaseNoticeEvent):
+    # 被踢出群
+    if event.sub_type == "kick_me":
+      del_group_info(event.group_id)
+    else:
+      del_member_info(event.user_id, event.group_id)
 
 @niuzi_register.handle()
 async def _(event: GroupMessageEvent):
   group = str(event.group_id)
   qq = str(event.user_id)
-  content = readInfo("data/long.json")
+  content = await readInfo("data/long.json")
   long = random_long()    
   try:
     if content[group]:
@@ -70,7 +80,7 @@ async def _(event: GroupMessageEvent):
       await niuzi_register.finish(Message("你已经注册过牛子啦！"), at_sender=True)
   except KeyError:
     content[group][qq] = long
-    readInfo('data/long.json', content)
+    await readInfo('data/long.json', content)
     await niuzi_register.finish(Message(f"注册牛子成功，当前长度{long}cm"), at_sender=True)
 
 @niuzi_fencing.handle()
@@ -103,7 +113,7 @@ async def _(event: GroupMessageEvent):
     pass
   #
   msg = event.get_message()
-  content = readInfo("data/long.json")
+  content = await readInfo("data/long.json")
   at_list = []
   for msg_seg in msg:
     if msg_seg.type == "at":
@@ -121,7 +131,7 @@ async def _(event: GroupMessageEvent):
         try:
           opponent_long = de(str(content[group][at]))
           group_user_jj[group][qq]['time'] = time.time()
-          result = fencing(my_long, opponent_long, at, qq, group, content)
+          result = await fencing(my_long, opponent_long, at, qq, group, content)
         except KeyError:
           result = "对方还没有牛子呢，你不能和ta击剑！"
       else:
@@ -138,7 +148,7 @@ async def _(event: GroupMessageEvent):
 async def _(event: GroupMessageEvent):
   qq = str(event.user_id)
   group = str(event.group_id)
-  content = readInfo("data/long.json")
+  content = await readInfo("data/long.json")
   try:
     my_long = content[group][qq]
     if my_long <= -100:
@@ -217,18 +227,18 @@ async def _(event: GroupMessageEvent, arg: Message = CommandArg()):
         num = int(num)
     else:
         num = 10
-    all_users = get_all_users(str(event.group_id))
+    all_users = await get_all_users(str(event.group_id))
     all_user_id = []
     all_user_data = []
     for user_id, user_data in all_users.items():
       if user_data > 0:
         all_user_id.append(int(user_id))
         all_user_data.append(user_data)
-    
-    if len(all_user_id)!=0: 
+        
+    if len(all_user_id) != 0: 
       rank_image = await init_rank("牛子长度排行榜-单位cm", all_user_id, all_user_data, event.group_id, num)
       if rank_image:
-          await niuzi_ranking.finish(image(b64=rank_image.pic2bs4()))
+          await niuzi_ranking.finish(image(b64=pic2b64(rank_image)))
     else: 
       await niuzi_ranking.finish(Message("暂无此排行榜数据...", at_sender=True))
         
@@ -239,18 +249,18 @@ async def _(event: GroupMessageEvent, arg: Message = CommandArg()):
         num = int(num)
     else:
         num = 10
-    all_users = get_all_users(str(event.group_id))
+    all_users = await get_all_users(str(event.group_id))
     all_user_id = []
     all_user_data = []
     for user_id, user_data in all_users.items():
       if user_data < 0:
         all_user_id.append(int(user_id))
         all_user_data.append(float(str(user_data)[1:]))
-    
-    if len(all_user_id)!= 0: 
+        
+    if len(all_user_id) != 0: 
       rank_image = await init_rank("牛子深度排行榜-单位cm", all_user_id, all_user_data, event.group_id, num)
       if rank_image:
-          await niuzi_ranking_e.finish(image(b64=rank_image.pic2bs4()))
+          await niuzi_ranking_e.finish(image(b64=pic2b64(rank_image)))
     else: 
       await niuzi_ranking_e.finish(Message("暂无此排行榜数据..."), at_sender=True)
 
@@ -284,7 +294,7 @@ async def _(event: GroupMessageEvent):
   except KeyError:
     pass
   try:
-    content = readInfo("data/long.json")
+    content = await readInfo("data/long.json")
     my_long = de(str(content[group][qq]))
     group_hit_glue[group][qq]['time'] = time.time()
     probability = random.randint(1, 100)
@@ -316,7 +326,7 @@ async def _(event: GroupMessageEvent):
           f"小打怡情，大打伤身，强打灰飞烟灭！你过度打胶，牛子缩短了{format(reduce,'.2f')}cm捏！"
           ])
     content[group][qq] = my_long
-    readInfo('data/long.json',content)
+    await readInfo('data/long.json',content)
   except KeyError:
     del group_hit_glue[group][qq]['time']
     result = random.choice([
