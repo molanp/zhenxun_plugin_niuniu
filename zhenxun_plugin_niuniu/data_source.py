@@ -73,28 +73,28 @@ def fencing(my, oppo, at, qq, group, content):
     """
     probability = random.randint(1, 100)
     if oppo <= -100 and my > 0 and 10 < probability <= 20:
-        oppo = 0.75*oppo
-        my = 0
-        result = f"对方身为魅魔诱惑了你，你被吞噬了全部长度！当前长度{my}cm!"
+        oppo = oppo - 0.25*my
+        my = 0 - my/2
+        result = f"对方身为魅魔诱惑了你，你同化成魅魔！当前深度{my}cm!"
         content[group][qq] = my
         content[group][at] = oppo
         readInfo('data/long.json', content)
     elif oppo >= 100 and my > 0 and 10 < probability <= 20:
-        oppo = 0.75*oppo
+        oppo = oppo + 0.5*my
         my = 0
         result = f"对方以牛头人的荣誉吞噬了你的全部长度！当前长度{my}cm!"
         content[group][qq] = my
         content[group][at] = oppo
         readInfo('data/long.json', content)
     elif my <= -100 and oppo > 0 and 10 < probability <= 20:
-        my = 0.75*my
-        oppo = 0
+        my = my - 0.25*oppo
+        oppo = 0 - oppo/2
         result = f"你身为魅魔诱惑了对方，吞噬了对方全部长度！当前长度{my}cm!"
         content[group][qq] = my
         content[group][at] = oppo
         readInfo('data/long.json', content)
     elif my >= 100 and oppo > 0 and 10 < probability <= 20:
-        my = 0.75*my
+        my = my + 0.5*oppo
         oppo = 0
         result = f"你以牛头人的荣誉吞噬了对方的全部长度！当前长度{oppo}cm!"
         content[group][qq] = my
