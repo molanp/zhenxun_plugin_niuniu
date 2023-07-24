@@ -28,7 +28,7 @@ usage：
 __plugin_des__ = "牛子大作战(误"
 __plugin_type__ = ("群内小游戏",)
 __plugin_cmd__ = ['注册牛子', '击剑', 'jj', 'JJ', 'Jj', 'jJ', '我的牛子', '牛子长度排行','牛子深度排行', '打胶', '牛牛大作战']
-__plugin_version__ = 0.5
+__plugin_version__ = 0.6
 __plugin_author__ = "molanp"
 __plugin_settings__ = {
     "level": 5,
@@ -276,7 +276,7 @@ async def _(event: GroupMessageEvent):
     probability = random.randint(1, 100)
     if 0 < probability <= 40:
       reduce = random_long()
-      my_long = my_long + reduce
+      my_long = my_long + reduce*my_long/10
       result = random.choice([
         f"你嘿咻嘿咻一下，促进了牛子发育，牛子增加{format(reduce,'.2f')}cm了呢！",
         f"你打了个舒服痛快的胶呐，牛子增加了{format(reduce,'.2f')}cm呢！"
@@ -288,7 +288,7 @@ async def _(event: GroupMessageEvent):
         ])
     else:
       reduce = random_long()
-      my_long = my_long - reduce
+      my_long = my_long - reduce*my_long/10
       if my_long < 0:
         result = random.choice([
           f"哦吼！？看来你的牛子凹进去了{format(reduce,'.2f')}cm呢！",
