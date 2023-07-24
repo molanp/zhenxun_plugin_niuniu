@@ -27,18 +27,18 @@ usage：
 """.strip()
 __plugin_des__ = "牛子大作战(误"
 __plugin_type__ = ("群内小游戏",)
-__plugin_cmd__ = ["注册牛子", "jj/JJ/Jj/jJ", "我的牛子", "牛子长度排行","牛子深度排行", "打胶", "牛牛大作战"]
+__plugin_cmd__ = ['注册牛子', '击剑', 'jj', 'JJ', 'Jj', 'jJ', '我的牛子', '牛子长度排行','牛子深度排行', '打胶', '牛牛大作战']
 __plugin_version__ = 0.5
 __plugin_author__ = "molanp"
 __plugin_settings__ = {
     "level": 5,
     "default_status": True,
     "limit_superuser": False,
-    "cmd": ['注册牛子', 'jj', 'JJ', 'Jj', 'jJ', '我的牛子', '牛子长度排行','牛子深度排行', '打胶', '牛牛大作战'],
+    "cmd": __plugin_cmd__,
 }
 
 niuzi_register = on_command("注册牛子", priority=5, block=True)
-niuzi_fencing = on_command("jj", aliases={'JJ', 'Jj', 'jJ'}, priority=5, block=True)
+niuzi_fencing = on_command("jj", aliases={'JJ', 'Jj', 'jJ', '击剑'}, priority=5, block=True)
 niuzi_my = on_command("我的牛子", priority=5, block=True)
 niuzi_ranking = on_command("牛子长度排行", priority=5, block=True)
 niuzi_ranking_e = on_command("牛子深度排行", priority=5, block=True)
