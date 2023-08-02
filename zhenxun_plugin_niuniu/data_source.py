@@ -3,6 +3,7 @@ import ujson
 import os
 import base64
 import asyncio
+import time
 from PIL import Image
 from io import BytesIO
 from decimal import Decimal as de
@@ -37,6 +38,9 @@ def fence(rd):
     Args:
         rd (decimal): 精确计算decimal类型或float,int
     """
+    if rd == 0:
+        current_second = time.localtime().tm_sec
+        rd = current_second % 10
     return de(abs(float(rd)*random.random())).quantize(de("0.00"))
 
 def readInfo(file, info=None):
