@@ -276,7 +276,7 @@ async def _(event: GroupMessageEvent):
     probability = random.randint(1, 100)
     if 0 < probability <= 40:
       reduce = random_long()
-      my_long = my_long + reduce*my_long/10
+      my_long = my_long + abs(reduce*my_long/10)
       result = random.choice([
         f"你嘿咻嘿咻一下，促进了牛子发育，牛子增加{format(reduce,'.2f')}cm了呢！",
         f"你打了个舒服痛快的胶呐，牛子增加了{format(reduce,'.2f')}cm呢！"
@@ -288,7 +288,7 @@ async def _(event: GroupMessageEvent):
         ])
     else:
       reduce = random_long()
-      my_long = my_long - reduce*my_long/10
+      my_long = my_long - adb(reduce*my_long/10)
       if my_long < 0:
         result = random.choice([
           f"哦吼！？看来你的牛子凹进去了{format(reduce,'.2f')}cm呢！",
