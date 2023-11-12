@@ -288,7 +288,7 @@ async def _(event: GroupMessageEvent):
         ])
     else:
       reduce = random_long()
-      my_long = my_long - adb(reduce*my_long/10)
+      my_long = my_long - abs(reduce*my_long/10)
       if my_long < 0:
         result = random.choice([
           f"哦吼！？看来你的牛子凹进去了{format(reduce,'.2f')}cm呢！",
