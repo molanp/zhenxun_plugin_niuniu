@@ -1,3 +1,4 @@
+from nonebot import require
 from nonebot import on_command
 from nonebot.params import CommandArg
 from utils.utils import is_number
@@ -43,11 +44,17 @@ niuzi_my = on_command("我的牛子", priority=5, block=True)
 niuzi_ranking = on_command("牛子长度排行", priority=5, block=True)
 niuzi_ranking_e = on_command("牛子深度排行", priority=5, block=True)
 niuzi_hit_glue = on_command("打胶", priority=5, block=True)
+scheduler = require("nonebot_plugin_apscheduler").scheduler#定时任务
 
 group_user_jj = {}
 group_hit_glue = {}
 
 path = os.path.dirname(__file__)
+
+#定时重置数据
+@scheduler.scheduled_job("cron", hour=0, minute=0)
+async def daily_reset():
+    reset_long_json()
 
 if not os.path.exists(f"{path}/data"):
     os.makedirs(f"{path}/data")
