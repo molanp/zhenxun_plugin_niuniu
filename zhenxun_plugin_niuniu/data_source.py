@@ -14,6 +14,12 @@ from typing import List, Union
 
 path = os.path.dirname(__file__)
 
+def reset_long_json():
+    path = os.path.dirname(__file__)
+    with open(os.path.join(path, "data/long.json"), "w", encoding="utf-8") as f:
+        f.write('{}')
+    print("long.json has been reset.")
+
 def pic2b64(pic: Image) -> str:
     """
     说明:
