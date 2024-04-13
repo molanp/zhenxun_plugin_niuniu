@@ -19,8 +19,9 @@ from PIL.ImageFont import FreeTypeFont
 
 from nonebot.adapters.onebot.v11.message import Message, MessageSegment
 
-IMAGE_PATH = Path() / "image"
-FONT_PATH = Path() / "font"
+path = os.path.dirname(__file__)
+IMAGE_PATH = os.path.join(path, "image")
+FONT_PATH = os.path.join(path, "font")
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 Image.MAX_IMAGE_PIXELS = None

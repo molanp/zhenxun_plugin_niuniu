@@ -7,16 +7,15 @@ import time
 from PIL import Image
 from io import BytesIO
 from decimal import Decimal as de
-from pathlib import Path
 from .image_utils import BuildMat
 from typing import List, Union
 
 path = os.path.dirname(__file__)
-IMAGE_PATH = Path() / "image"
+IMAGE_PATH = os.path.join(path, "image")
 
 def reset_long_json():
     path = os.path.dirname(__file__)
-    with open(os.path.join(path, "data/long.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(path, "data","long.json"), "w", encoding="utf-8") as f:
         f.write('{}')
     print("long.json has been reset.")
 
@@ -258,7 +257,7 @@ def _init_rank_graph(
         x_rotate=30,
         background=[
             f"{IMAGE_PATH}/{x}"
-            for x in os.listdir(f"{IMAGE_PATH}/")
+            for x in os.listdir(f"{IMAGE_PATH}")
         ],
         bar_color=["*"],
     )
