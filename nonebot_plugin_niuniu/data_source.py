@@ -7,6 +7,7 @@ import time
 from PIL import Image
 from io import BytesIO
 from decimal import Decimal as de
+from pathlib import Path
 from .image_utils import BuildMat
 from typing import List, Union
 
