@@ -23,7 +23,7 @@ nonebot群内小游戏插件-牛牛大作战(误
 ## 依赖
 
 ```
-ujson, pillow, opencv-python, imagehash
+ujson, Pillow = "^9.0.1", opencv-python, imagehash
 ```
 
 ## 说明

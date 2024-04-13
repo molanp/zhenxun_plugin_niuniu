@@ -185,7 +185,7 @@ async def _(event: GroupMessageEvent):
     elif 10 < my_long <= 25:
       result = random.choice([
         f"唔，当前牛子长度是{format(my_long,'.2f')}cm",
-        f"已经很长呢！当前长度{format(my_long,'.2f')}cm"
+        f"已经很长了呢！当前长度{format(my_long,'.2f')}cm"
       ])
     elif 25 < my_long <= 50:
       result = random.choice([
@@ -201,7 +201,7 @@ async def _(event: GroupMessageEvent):
         f"你是什么怪物，不要过来啊！当前牛子长度{format(my_long,'.2f')}cm！"
       ])
     elif 100 < my_long:
-      result = f"惊世骇俗！你已经进化成牛头人了！当前牛子长度{format(my_long,'.2f')}cm！！！" + image(b64=(await text2image("头人\n说明：\n击剑时有20%的几率消耗自身长度吞噬对方牛子", color="#f9f6f2", padding=10)).pic2bs4())
+      result = f"惊世骇俗！你已经进化成牛头人了！当前牛子长度{format(my_long,'.2f')}cm！！！" + image(b64=(await text2image("牛头人\n说明：\n击剑时有20%的几率消耗自身长度吞噬对方牛子", color="#f9f6f2", padding=10)).pic2bs4())
   except KeyError:
     result = "你还没有牛子呢！"
   finally:
