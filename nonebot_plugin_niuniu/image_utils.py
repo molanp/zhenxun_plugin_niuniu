@@ -240,6 +240,7 @@ class BuildImage:
                             if is_edit:
                                 array[i, j] = (255, 255, 255, 0)
             except Exception as e:
+              pass
                 #logger.warning(f"背景透明化发生错误..{type(e)}：{e}")
         self.draw = ImageDraw.Draw(self.markImg)
         self.size = self.w, self.h
