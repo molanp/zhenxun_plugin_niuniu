@@ -11,7 +11,7 @@ from .image_utils import BuildMat
 from typing import List, Union
 
 path = os.path.dirname(__file__)
-IMAGE_PATH = os.path.join(path, "image")
+IMAGE_PATH = Path(__file__).resolve().parent / "image"
 
 def reset_long_json():
     path = os.path.dirname(__file__)
