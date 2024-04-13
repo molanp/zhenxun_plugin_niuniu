@@ -20,6 +20,7 @@ usage：
     合理安排时间，享受健康生活
 
     注册牛子 --注册你的牛子
+    注销牛子 --销毁你的牛子
     jj [@user] --与注册牛子的人进行击剑，对战结果影响牛子长度
     我的牛子 --查看自己牛子长度
     牛子长度排行 --查看本群正数牛子长度排行
@@ -28,7 +29,7 @@ usage：
 """.strip()
 __plugin_des__ = "牛子大作战(误"
 __plugin_type__ = ("群内小游戏",)
-__plugin_cmd__ = ['注册牛子', '击剑', 'jj', 'JJ', 'Jj', 'jJ', '我的牛子', '牛子长度排行','牛子深度排行', '打胶', '牛牛大作战']
+__plugin_cmd__ = ['注册牛子', '击剑', 'jj', 'JJ', 'Jj', 'jJ', '我的牛子', '牛子长度排行','牛子深度排行', '打胶', '牛牛大作战', "注销牛子"]
 __plugin_version__ = 0.6
 __plugin_author__ = "molanp"
 __plugin_settings__ = {
@@ -39,6 +40,7 @@ __plugin_settings__ = {
 }
 
 niuzi_register = on_command("注册牛子", priority=5, block=True)
+niuzi_delete = on_command("注销牛子", priority=10, block=True)
 niuzi_fencing = on_command("jj", aliases={'JJ', 'Jj', 'jJ', '击剑'}, priority=5, block=True)
 niuzi_my = on_command("我的牛子", priority=5, block=True)
 niuzi_ranking = on_command("牛子长度排行", priority=5, block=True)
@@ -52,10 +54,11 @@ group_hit_glue = {}
 path = os.path.dirname(__file__)
 
 #定时重置数据
+"""
 @scheduler.scheduled_job("cron", hour=0, minute=0)
 async def daily_reset():
     reset_long_json()
-
+"""
 if not os.path.exists(f"{path}/data"):
     os.makedirs(f"{path}/data")
     with open(os.path.join(path, "data/long.json"), "w", encoding="utf-8") as f:
@@ -80,6 +83,18 @@ async def _(event: GroupMessageEvent):
     readInfo('data/long.json', content)
     await niuzi_register.finish(Message(f"注册牛子成功，当前长度{long}cm"), at_sender=True)
 
+@niuzi_delete.handle()
+async def _(event: GroupMessageEvent):
+  group = str(event.group_id)
+  qq = str(event.user_id)
+  content = readInfo("data/long.json")
+  try:
+    del content[group][qq]
+      readInfo('data/long.json', content)
+    await niuzi_delete.finish(Message("你的牛子被销毁啦！"), at_sender=True)
+  except NameError:
+    await niuzi_delete.finish(Message("你还没有牛子呢！"), at_sender=True)
+    
 @niuzi_fencing.handle()
 async def _(event: GroupMessageEvent):
   qq = str(event.user_id)
@@ -181,7 +196,7 @@ async def _(event: GroupMessageEvent):
     elif 10 < my_long <= 25:
       result = random.choice([
         f"唔，当前牛子长度是{format(my_long,'.2f')}cm",
-        f"已经很长呢！当前长度{format(my_long,'.2f')}cm"
+        f"已经很长了呢！当前长度{format(my_long,'.2f')}cm"
       ])
     elif 25 < my_long <= 50:
       result = random.choice([
@@ -197,7 +212,7 @@ async def _(event: GroupMessageEvent):
         f"你是什么怪物，不要过来啊！当前牛子长度{format(my_long,'.2f')}cm！"
       ])
     elif 100 < my_long:
-      result = f"惊世骇俗！你已经进化成牛头人了！当前牛子长度{format(my_long,'.2f')}cm！！！" + image(b64=(await text2image("头人\n说明：\n击剑时有20%的几率消耗自身长度吞噬对方牛子", color="#f9f6f2", padding=10)).pic2bs4())
+      result = f"惊世骇俗！你已经进化成牛头人了！当前牛子长度{format(my_long,'.2f')}cm！！！" + image(b64=(await text2image("牛头人\n说明：\n击剑时有20%的几率消耗自身长度吞噬对方牛子", color="#f9f6f2", padding=10)).pic2bs4())
   except KeyError:
     result = "你还没有牛子呢！"
   finally:
