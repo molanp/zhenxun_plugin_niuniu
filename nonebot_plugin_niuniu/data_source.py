@@ -6,6 +6,7 @@ import asyncio
 import time
 from PIL import Image
 from io import BytesIO
+from pathlib import Path
 from decimal import Decimal as de
 from .image_utils import BuildMat
 from typing import List, Union
