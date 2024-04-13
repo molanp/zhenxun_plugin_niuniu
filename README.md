@@ -1,10 +1,14 @@
-# zhenxun_plugin_niuniu
-真寻群内小游戏插件-牛牛大作战(误
+# nonebot_plugin_niuniu
+nonebot群内小游戏插件-牛牛大作战(误
 
 # 本插件无需数据库！(因为我不会bushi)
 
+## 此分支为nonebot插件，真寻插件请移步主分支
+
+因真寻bot提供了一些通用函数，所以移植版本实现效果可能与真寻版本略有不同
+
 ## 使用方法
-下载压缩包，解压并放入`extensive_plugin`文件夹或其他自定义文件夹中
+下载压缩包，解压并放入`plugins`文件夹或其他自定义文件夹中
 
 ## 指令
 |指令|功能描述|
@@ -18,9 +22,8 @@
 
 ## 依赖
 
-正常情况真寻的虚拟环境里附带此模块
-```powershell
-pip install ujson
+```
+ujson, pillow, opencv-python
 ```
 
 ## 说明
