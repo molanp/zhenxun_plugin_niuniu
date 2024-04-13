@@ -17,6 +17,7 @@ __plugin_meta__ = PluginMetadata(
     description="牛牛大作战，楠铜快乐游",
     usage="""
     注册牛子 --注册你的牛子
+    注销牛子 --销毁你的牛子
     jj [@user] --与注册牛子的人进行击剑，对战结果影响牛子长度
     我的牛子 --查看自己牛子长度
     牛子长度排行 --查看本群正数牛子长度排行
@@ -28,6 +29,7 @@ __plugin_meta__ = PluginMetadata(
 )
 
 niuzi_register = on_command("注册牛子", priority=10, block=True)
+niuzi_delete = on_command("注销牛子", priority=10, block=True)
 niuzi_fencing = on_command("jj", aliases={'JJ', 'Jj', 'jJ', '击剑'}, priority=10, block=True)
 niuzi_my = on_command("我的牛子", priority=10, block=True)
 niuzi_ranking = on_command("牛子长度排行", priority=10, block=True)
@@ -48,7 +50,7 @@ async def daily_reset():
 """
 if not os.path.exists(f"{path}/data"):
     os.makedirs(f"{path}/data")
-    with open(os.path.join(path, "data/long.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(path, "data", "long.json"), "w", encoding="utf-8") as f:
       f.write('{}')
 
 @niuzi_register.handle()
@@ -70,6 +72,18 @@ async def _(event: GroupMessageEvent):
     readInfo('data/long.json', content)
     await niuzi_register.finish(Message(f"注册牛子成功，当前长度{long}cm"), at_sender=True)
 
+@niuzi_delete.handle()
+async def _(event: GroupMessageEvent):
+  group = str(event.group_id)
+  qq = str(event.user_id)
+  content = readInfo("data/long.json")
+  try:
+    del content[group][qq]
+      readInfo('data/long.json', content)
+    await niuzi_delete.finish(Message("你的牛子被销毁啦！"), at_sender=True)
+  except NameError:
+    await niuzi_delete.finish(Message("你还没有牛子呢！"), at_sender=True)
+  
 @niuzi_fencing.handle()
 async def _(event: GroupMessageEvent):
   qq = str(event.user_id)
