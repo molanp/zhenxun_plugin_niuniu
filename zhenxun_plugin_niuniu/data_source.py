@@ -82,34 +82,24 @@ def fencing(my, oppo, at, qq, group, content):
         content (dic): 数据
     """
     probability = random.randint(1, 100)
+    my = float(my)
+    oppo = float(oppo)
     if oppo <= -100 and my > 0 and 10 < probability <= 20:
         oppo = oppo - 0.25*my
         my = 0 - my/2
         result = f"对方身为魅魔诱惑了你，你同化成魅魔！当前深度{my}cm!"
-        content[group][qq] = my
-        content[group][at] = oppo
-        readInfo('data/long.json', content)
     elif oppo >= 100 and my > 0 and 10 < probability <= 20:
         oppo = oppo + 0.5*my
         my = 0
         result = f"对方以牛头人的荣誉吞噬了你的全部长度！当前长度{my}cm!"
-        content[group][qq] = my
-        content[group][at] = oppo
-        readInfo('data/long.json', content)
     elif my <= -100 and oppo > 0 and 10 < probability <= 20:
         my = my - 0.25*oppo
         oppo = 0 - oppo/2
         result = f"你身为魅魔诱惑了对方，吞噬了对方全部长度！当前长度{my}cm!"
-        content[group][qq] = my
-        content[group][at] = oppo
-        readInfo('data/long.json', content)
     elif my >= 100 and oppo > 0 and 10 < probability <= 20:
         my = my + 0.5*oppo
         oppo = 0
         result = f"你以牛头人的荣誉吞噬了对方的全部长度！当前长度{oppo}cm!"
-        content[group][qq] = my
-        content[group][at] = oppo
-        readInfo('data/long.json', content)
     else:
         if oppo > my:
             probability = random.randint(1, 100)
@@ -125,9 +115,6 @@ def fencing(my, oppo, at, qq, group, content):
                 else:
                     result = f"对方以绝对的长度让你屈服了呢！你的长度减少{format(reduce,'.2f')}cm，当前长度{format(my,'.2f')}cm！"
                 oppo = oppo + reduce
-                content[group][qq] = my
-                content[group][at] = oppo
-                readInfo('data/long.json', content)
 
             else:
                 reduce = fence(oppo)
@@ -140,9 +127,6 @@ def fencing(my, oppo, at, qq, group, content):
                     ])
                 else:
                     result = f"虽然你不够长，但是你逆袭了呢！你的长度增加{format(reduce,'.2f')}cm，当前长度{format(my,'.2f')}cm！"
-                content[group][qq] = my
-                content[group][at] = oppo
-                readInfo('data/long.json', content)
         elif my > oppo:
             probability = random.randint(1, 100)
             if 0 < probability <= 80:
@@ -156,9 +140,6 @@ def fencing(my, oppo, at, qq, group, content):
                     ])
                 else:
                     result = f"你以绝对的长度让对方屈服了呢！你的长度增加{format(reduce,'.2f')}cm，当前长度{format(my,'.2f')}cm！"
-                content[group][qq] = my
-                content[group][at] = oppo
-                readInfo('data/long.json', content)
             else:
                 reduce = fence(my)
                 my = my - reduce
@@ -171,9 +152,6 @@ def fencing(my, oppo, at, qq, group, content):
                 else:
                     result = f"虽然你比较长，但是对方逆袭了呢！你的长度减少{format(reduce,'.2f')}cm，当前长度{format(my,'.2f')}cm！"
                 oppo = oppo + reduce
-                content[group][qq] = my
-                content[group][at] = oppo
-                readInfo('data/long.json', content)
         else:
             probability = random.randint(1, 100)
             reduce = fence(oppo)
@@ -187,9 +165,6 @@ def fencing(my, oppo, at, qq, group, content):
                     ])
                 else:
                     result = f"你以技艺的高超让对方屈服啦！你的长度增加{format(reduce,'.2f')}cm，当前长度{format(my,'.2f')}cm！"
-                content[group][qq] = my
-                content[group][at] = oppo
-                readInfo('data/long.json', content)
             else:
                 my = my - reduce
                 if my < 0:
@@ -201,9 +176,10 @@ def fencing(my, oppo, at, qq, group, content):
                 else:
                     result = f"由于对方击剑技术过于高超，你的长度减少{format(reduce,'.2f')}cm，当前长度{format(my,'.2f')}cm！"
                 oppo = oppo + reduce
-                content[group][qq] = my
-                content[group][at] = oppo
-                readInfo('data/long.json', content)
+    content[group][qq] = round(my, 2)
+    content[group][at] = round(oppo,2)
+
+    readInfo("data/long.json",content)
     return result
 
 async def init_rank(
