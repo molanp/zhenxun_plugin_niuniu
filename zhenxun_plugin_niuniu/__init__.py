@@ -54,7 +54,7 @@ data_dir = Path(__file__).resolve().parent / "data"
 data_dir.mkdir(parents=True, exist_ok=True)
 long_json_file = data_dir / "long.json"
 if not long_json_file.exists():
-    ReadOrWrite(long_json_file, {})
+    ReadOrWrite("data/long.json", {})
 
 
 @niuzi_register.handle()
