@@ -7,7 +7,6 @@ from nonebot.adapters.onebot.v11 import (
     Message)
 from .data_source import *
 from decimal import Decimal as de
-import os
 import time
 import random
 
@@ -164,7 +163,7 @@ async def _(event: GroupMessageEvent):
     content = ReadOrWrite("data/long.json")
     try:
         my_long = content[group][qq]
-        values = [content[group][key] for key in sorted(content[group], reverse=True)]
+        values = [content[group][key] for key in sorted(content[group], key=lambda k: content[group][k], reverse=True)]
         rank = 1
         previous_value = None
         sex_long = "深" if my_long < 0 else "长"
