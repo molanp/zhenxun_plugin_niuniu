@@ -148,7 +148,10 @@ async def _(event: GroupMessageEvent):
         else:
             result = "你要和谁击剑？你自己吗？"
     except KeyError:
-        del group_user_jj[group][qq]["time"]
+        try:
+            del group_user_jj[group][qq]["time"]
+        except KeyError:
+            pass
         result = "你还没有牛子呢！不能击剑！"
     finally:
         await niuzi_fencing.finish(Message(result), at_sender=True)
