@@ -7,18 +7,12 @@ import time
 from PIL import Image
 from io import BytesIO
 from decimal import Decimal as de
+from pathlib import Path
 from models.group_member_info import GroupInfoUser
 from utils.image_utils import BuildMat
 from configs.path_config import IMAGE_PATH
 from typing import List, Union
 
-path = os.path.dirname(__file__)
-
-def reset_long_json():
-    path = os.path.dirname(__file__)
-    with open(os.path.join(path, "data/long.json"), "w", encoding="utf-8") as f:
-        f.write('{}')
-    print("long.json has been reset.")
 
 def pic2b64(pic: Image) -> str:
     """
@@ -32,11 +26,13 @@ def pic2b64(pic: Image) -> str:
     base64_str = base64.b64encode(buf.getvalue()).decode()
     return "base64://" + base64_str
 
+
 def random_long():
     """
     注册随机牛子长度
     """
     return de(str(f"{random.randint(1,9)}.{random.randint(00,99)}"))
+
 
 def fence(rd):
     """
@@ -47,29 +43,38 @@ def fence(rd):
     if rd == 0:
         current_second = time.localtime().tm_sec
         rd = current_second % 10
-    return de(abs(float(rd)*random.random())).quantize(de("0.00"))
+    return de(abs(float(rd)*random.random(0.3, 1.1))).quantize(de("0.00"))
 
-def readInfo(file, info=None):
+
+def ReadOrWrite(file, w=None):
     """
-    读取文件信息
+    读取或写入文件
+
+    Args:
+        file (string): 文件路径，相对于脚本
+        w (string, optional): 写入内容，不传入则读. Defaults to None.
+
+    Returns:
+        dict: 文件内容(仅读取)
     """
-    with open(os.path.join(path, file), "r", encoding="utf-8") as f:
-        context = f.read()
-        if info != None:
-            with open(os.path.join(path, file), "w", encoding="utf-8") as f:
-                f.write(ujson.dumps(info, indent=4, ensure_ascii=False))
-            return {"data": ujson.loads(context.strip())}
-        else:
-            return ujson.loads(context.strip())
+    file_path = Path(__file__).resolve().parent / file
+    if w is not None:
+        with file_path.open("w", encoding="utf-8") as f:
+            f.write(ujson.dumps(w, indent=4, ensure_ascii=False))
+        return True
+    else:
+        with file_path.open("r", encoding="utf-8") as f:
+            return ujson.loads(f.read().strip())
+
 
 def get_all_users(group):
     """
     获取全部用户及长度
     """
-    group = readInfo("data/long.json")[group]
-    return group
+    return ReadOrWrite("data/long.json")[group]
 
-def fencing(my, oppo, at, qq, group, content):
+
+def fencing(my, oppo, at, qq, group, content={}):
     """
     击剑判断
 
@@ -81,25 +86,27 @@ def fencing(my, oppo, at, qq, group, content):
         group (str): 当前群号
         content (dic): 数据
     """
+    # 损失比例
+    RdLimit = de(0.25)
+    # 吞噬比例
+    GtLimit = de(0.27)
     probability = random.randint(1, 100)
-    my = float(my)
-    oppo = float(oppo)
     if oppo <= -100 and my > 0 and 10 < probability <= 20:
-        oppo = oppo - 0.25*my
-        my = 0 - my/2
+        oppo += RdLimit*my
+        my -= RdLimit*my
         result = f"对方身为魅魔诱惑了你，你同化成魅魔！当前深度{my}cm!"
     elif oppo >= 100 and my > 0 and 10 < probability <= 20:
-        oppo = oppo + 0.5*my
-        my = 0
-        result = f"对方以牛头人的荣誉吞噬了你的全部长度！当前长度{my}cm!"
+        oppo += GtLimit*my
+        my -= GtLimit*my
+        result = f"对方以牛头人的荣誉吞噬了你的部分长度！当前长度{my}cm!"
     elif my <= -100 and oppo > 0 and 10 < probability <= 20:
-        my = my - 0.25*oppo
-        oppo = 0 - oppo/2
-        result = f"你身为魅魔诱惑了对方，吞噬了对方全部长度！当前长度{my}cm!"
+        my -= RdLimit*oppo
+        oppo += RdLimit*oppo
+        result = f"你身为魅魔诱惑了对方，吞噬了对方部分长度！当前长度{my}cm!"
     elif my >= 100 and oppo > 0 and 10 < probability <= 20:
-        my = my + 0.5*oppo
-        oppo = 0
-        result = f"你以牛头人的荣誉吞噬了对方的全部长度！当前长度{oppo}cm!"
+        my += GtLimit*oppo
+        oppo -= GtLimit*oppo
+        result = f"你以牛头人的荣誉吞噬了对方的部分长度！当前长度{oppo}cm!"
     else:
         if oppo > my:
             probability = random.randint(1, 100)
@@ -108,79 +115,79 @@ def fencing(my, oppo, at, qq, group, content):
                 my = my - reduce
                 if my < 0:
                     result = random.choice([
-                        f"哦吼！？看来你的牛子因为击剑而凹进去了呢！凹进去了{format(reduce,'.2f')}cm！",
-                        f"由于对方击剑技术过于高超，造成你的牛子凹了进去呢！凹进去了深{format(reduce,'.2f')}cm哦！",
-                        f"好惨啊，本来就不长的牛子现在凹进去了呢！凹进去了{format(reduce,'.2f')}cm呢！"
+                        f"哦吼！？看来你的牛子因为击剑而凹进去了呢！凹进去了{reduce}cm！",
+                        f"由于对方击剑技术过于高超，造成你的牛子凹了进去呢！凹进去了深{reduce}cm哦！",
+                        f"好惨啊，本来就不长的牛子现在凹进去了呢！凹进去了{reduce}cm呢！"
                     ])
                 else:
-                    result = f"对方以绝对的长度让你屈服了呢！你的长度减少{format(reduce,'.2f')}cm，当前长度{format(my,'.2f')}cm！"
+                    result = f"对方以绝对的长度让你屈服了呢！你的长度减少{reduce}cm，当前长度{my}cm！"
                 oppo = oppo + reduce
 
             else:
                 reduce = fence(oppo)
-                oppo = oppo - reduce
-                my = my + reduce
+                oppo -= reduce
+                my += reduce
                 if my < 0:
                     result = random.choice([
-                        f"哦吼！？你的牛子在长大欸！长大了{format(reduce,'.2f')}cm！",
-                        f"牛子凹进去的深度变浅了欸！变浅了{format(reduce,'.2f')}cm！"
+                        f"哦吼！？你的牛子在长大欸！长大了{reduce}cm！",
+                        f"牛子凹进去的深度变浅了欸！变浅了{reduce}cm！"
                     ])
                 else:
-                    result = f"虽然你不够长，但是你逆袭了呢！你的长度增加{format(reduce,'.2f')}cm，当前长度{format(my,'.2f')}cm！"
+                    result = f"虽然你不够长，但是你逆袭了呢！你的长度增加{reduce}cm，当前长度{my}cm！"
         elif my > oppo:
             probability = random.randint(1, 100)
-            if 0 < probability <= 80:
+            if 0 < probability <= 73:
                 reduce = fence(oppo)
-                oppo = oppo - reduce
-                my = my + reduce
+                oppo -= reduce
+                my += reduce
                 if my < 0:
                     result = random.choice([
-                        f"哦吼！？你的牛子在长大欸！长大了{format(reduce,'.2f')}cm！",
-                        f"牛子凹进去的深度变浅了欸！变浅了{format(reduce,'.2f')}cm！"
+                        f"哦吼！？你的牛子在长大欸！长大了{reduce}cm！",
+                        f"牛子凹进去的深度变浅了欸！变浅了{reduce}cm！"
                     ])
                 else:
-                    result = f"你以绝对的长度让对方屈服了呢！你的长度增加{format(reduce,'.2f')}cm，当前长度{format(my,'.2f')}cm！"
+                    result = f"你以绝对的长度让对方屈服了呢！你的长度增加{reduce}cm，当前长度{my}cm！"
             else:
                 reduce = fence(my)
-                my = my - reduce
+                oppo += reduce
+                my -= reduce
                 if my < 0:
                     result = random.choice([
-                        f"哦吼！？看来你的牛子因为击剑而凹进去了呢！目前深度{format(reduce,'.2f')}cm！",
-                        f"由于对方击剑技术过于高超，造成你的牛子凹了进去呢！当前深度{format(reduce,'.2f')}cm！",
-                        f"好惨啊，本来就不长的牛子现在凹进去了呢！凹进去了{format(reduce,'.2f')}cm！"
+                        f"哦吼！？看来你的牛子因为击剑而凹进去了呢！目前深度{reduce}cm！",
+                        f"由于对方击剑技术过于高超，造成你的牛子凹了进去呢！当前深度{reduce}cm！",
+                        f"好惨啊，本来就不长的牛子现在凹进去了呢！凹进去了{reduce}cm！"
                     ])
                 else:
-                    result = f"虽然你比较长，但是对方逆袭了呢！你的长度减少{format(reduce,'.2f')}cm，当前长度{format(my,'.2f')}cm！"
-                oppo = oppo + reduce
+                    result = f"虽然你比较长，但是对方逆袭了呢！你的长度减少{reduce}cm，当前长度{my}cm！"
         else:
             probability = random.randint(1, 100)
             reduce = fence(oppo)
             if 0 < probability <= 50:
-                oppo = oppo - reduce
-                my = my + reduce
+                oppo -= reduce
+                my += reduce
                 if my < 0:
                     result = random.choice([
-                        f"哦吼！？你的牛子在长大欸！长大了{format(reduce,'.2f')}cm！",
-                        f"牛子凹进去的深度变浅了欸！变浅了{format(reduce,'.2f')}cm！"
+                        f"哦吼！？你的牛子在长大欸！长大了{reduce}cm！",
+                        f"牛子凹进去的深度变浅了欸！变浅了{reduce}cm！"
                     ])
                 else:
-                    result = f"你以技艺的高超让对方屈服啦！你的长度增加{format(reduce,'.2f')}cm，当前长度{format(my,'.2f')}cm！"
+                    result = f"你以技艺的高超让对方屈服啦🎉！你的长度增加{reduce}cm，当前长度{my}cm！"
             else:
-                my = my - reduce
+                oppo += reduce
+                my -= reduce
                 if my < 0:
                     result = random.choice([
-                        f"哦吼！？看来你的牛子因为击剑而凹进去了呢！目前深度{format(reduce,'.2f')}cm！",
-                        f"由于对方击剑技术过于高超，造成你的牛子凹了进去呢！当前深度{format(reduce,'.2f')}cm！",
-                        f"好惨啊，本来就不长的牛子现在凹进去了呢！凹进去了{format(reduce,'.2f')}cm！"
+                        f"哦吼！？看来你的牛子因为击剑而凹进去了呢🤣🤣🤣！目前深度{reduce}cm！",
+                        f"由于对方击剑技术过于高超，造成你的牛子凹了进去呢😰！当前深度{reduce}cm！",
+                        f"好惨啊，本来就不长的牛子现在凹进去了呢😂！凹进去了{reduce}cm！"
                     ])
                 else:
-                    result = f"由于对方击剑技术过于高超，你的长度减少{format(reduce,'.2f')}cm，当前长度{format(my,'.2f')}cm！"
-                oppo = oppo + reduce
-    content[group][qq] = round(my, 2)
-    content[group][at] = round(oppo,2)
-
-    readInfo("data/long.json",content)
+                    result = f"由于对方击剑技术过于高超，你的长度减少{reduce}cm，当前长度{my}cm！"
+    content[group][qq] = my
+    content[group][at] = oppo
+    ReadOrWrite("data/long.json", content)
     return result
+
 
 async def init_rank(
     title: str, all_user_id: List[int], all_user_data: List[float], group_id: int, total_count: int = 10
@@ -215,6 +222,7 @@ async def init_rank(
     return await asyncio.get_event_loop().run_in_executor(
         None, _init_rank_graph, title, _uname_lst, _num_lst
     )
+
 
 def _init_rank_graph(
     title: str, _uname_lst: List[str], _num_lst: List[Union[int, float]]
