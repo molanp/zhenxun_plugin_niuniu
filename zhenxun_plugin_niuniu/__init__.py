@@ -311,10 +311,10 @@ async def _(event: GroupMessageEvent):
         probability = random.randint(1, 100)
         if 0 < probability <= 40:
             reduce = random_long()
-            my_long = my_long + abs(reduce*my_long/10)
+            my_long += abs(reduce*de(my_long/10))
             result = random.choice([
-                f"你嘿咻嘿咻一下，促进了牛子发育，牛子增加{format(reduce,".2f")}cm了呢！",
-                f"你打了个舒服痛快的🦶呐，牛子增加了{format(reduce,".2f")}cm呢！"
+                f"你嘿咻嘿咻一下，促进了牛子发育，牛子增加{reduce}cm了呢！",
+                f"你打了个舒服痛快的🦶呐，牛子增加了{reduce}cm呢！"
             ])
         elif 40 < probability <= 60:
             result = random.choice([
@@ -323,18 +323,18 @@ async def _(event: GroupMessageEvent):
             ])
         else:
             reduce = random_long()
-            my_long = my_long - abs(reduce*my_long/10)
+            my_long -= abs(reduce*de(my_long/10))
             if my_long < 0:
                 result = random.choice([
-                    f"哦吼！？看来你的牛子凹进去了{format(reduce,".2f")}cm呢！",
-                    f"你突发恶疾！你的牛子凹进去了{format(reduce,".2f")}cm！",
-                    f"笑死，你因为打🦶过度导致牛子凹进去了{format(reduce,".2f")}cm！🤣🤣🤣"
+                    f"哦吼！？看来你的牛子凹进去了{reduce}cm呢！",
+                    f"你突发恶疾！你的牛子凹进去了{reduce}cm！",
+                    f"笑死，你因为打🦶过度导致牛子凹进去了{reduce}cm！🤣🤣🤣"
                 ])
             else:
                 result = random.choice([
-                    f"阿哦，你过度打🦶，牛子缩短{format(reduce,".2f")}cm了呢！",
-                    f"你的牛子变长了很多，你很激动地继续打🦶，然后牛子缩短了{format(reduce,".2f")}cm呢！",
-                    f"小打怡情，大打伤身，强打灰飞烟灭！你过度打🦶，牛子缩短了{format(reduce,".2f")}cm捏！"
+                    f"阿哦，你过度打🦶，牛子缩短{reduce}cm了呢！",
+                    f"你的牛子变长了很多，你很激动地继续打🦶，然后牛子缩短了{reduce}cm呢！",
+                    f"小打怡情，大打伤身，强打灰飞烟灭！你过度打🦶，牛子缩短了{reduce}cm捏！"
                 ])
         content[group][qq] = my_long
         ReadOrWrite("data/long.json", content)
