@@ -46,21 +46,44 @@ def fence(rd):
     return de(abs(float(rd)*random.random())).quantize(de("0.00"))
 
 
+def round_numbers(data, num_digits=2):
+    """
+    递归地四舍五入所有数字
+
+    Args:
+        data (any): 要处理的数据
+        num_digits (int, optional): 四舍五入的小数位数. Defaults to 2.
+
+    Returns:
+        any: 处理后的数据
+    """
+    if isinstance(data, dict):
+        return {k: round_numbers(v, num_digits) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [round_numbers(item, num_digits) for item in data]
+    elif isinstance(data, (int, float)):
+        return round(data, num_digits)
+    else:
+        return data
+
+
 def ReadOrWrite(file, w=None):
     """
     读取或写入文件
 
     Args:
         file (string): 文件路径，相对于脚本
-        w (string, optional): 写入内容，不传入则读. Defaults to None.
+        w (any, optional): 写入内容，不传入则读. Defaults to None.
 
     Returns:
-        dict: 文件内容(仅读取)
+        any: 文件内容(仅读取)
     """
     file_path = Path(__file__).resolve().parent / file
     if w is not None:
+        # 对要写入的内容进行四舍五入处理
+        w_rounded = round_numbers(w)
         with file_path.open("w", encoding="utf-8") as f:
-            f.write(ujson.dumps(w, indent=4, ensure_ascii=False))
+            f.write(ujson.dumps(w_rounded, indent=4, ensure_ascii=False))
         return True
     else:
         with file_path.open("r", encoding="utf-8") as f:

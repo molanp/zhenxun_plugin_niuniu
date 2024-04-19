@@ -171,7 +171,7 @@ async def _(event: GroupMessageEvent):
         for value in values:
             difference = 0 if previous_value is None else previous_value - value
             if value <= my_long:
-                result = f"📛{str(event.sender.card)}<{qq}>的牛子信息\n⭕排名:#{rank}\n⭕性别:{sex}\n⭕{sex_long}度:{value}cm\n⭕与上一名差距:{difference}cm\n⭕备注: "
+                result = f"📛{str(event.sender.card)}<{qq}>的牛子信息\n⭕排名:#{rank}\n⭕性别:{sex}\n⭕{sex_long}度:{value}cm\n⭕与上一名差距:{round(difference,2)}cm\n⭕备注: "
                 break
             else:
                 rank += 1
