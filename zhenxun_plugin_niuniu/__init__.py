@@ -161,7 +161,7 @@ async def _(event: GroupMessageEvent):
     content = ReadOrWrite("data/long.json")
     try:
         my_long = content[group][qq]
-        values = sorted(content[group], reverse=True)
+        values = [content[group][key] for key in sorted(content[group], reverse=True)]
         rank = 1
         previous_value = None
         sex_long = "深" if my_long < 0 else "长"
@@ -169,7 +169,7 @@ async def _(event: GroupMessageEvent):
         for value in values:
             difference = 0 if previous_value is None else previous_value - value
             if value <= my_long:
-                result = f"📛{str(event.sender)}<{qq}>的牛子信息\n⭕排名:#{rank}\n⭕性别:{sex}\n⭕{sex_long}度:{value}cm\n⭕与上一名差距:{difference}cm\n⭕备注: "
+                result = f"📛{str(event.sender.card)}<{qq}>的牛子信息\n⭕排名:#{rank}\n⭕性别:{sex}\n⭕{sex_long}度:{value}cm\n⭕与上一名差距:{difference}cm\n⭕备注: "
                 break
             else:
                 rank += 1
