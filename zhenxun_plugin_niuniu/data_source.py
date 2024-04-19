@@ -43,7 +43,7 @@ def fence(rd):
     if rd == 0:
         current_second = time.localtime().tm_sec
         rd = current_second % 10
-    return de(abs(float(rd)*random.random(0.3, 1.1))).quantize(de("0.00"))
+    return de(abs(float(rd)*random.random())).quantize(de("0.00"))
 
 
 def ReadOrWrite(file, w=None):
