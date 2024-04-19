@@ -90,7 +90,7 @@ async def _(event: GroupMessageEvent):
   content = readInfo("data/long.json")
   try:
     del content[group][qq]
-      readInfo('data/long.json', content)
+    readInfo('data/long.json', content)
     await niuzi_delete.finish(Message("你的牛子被销毁啦！"), at_sender=True)
   except NameError:
     await niuzi_delete.finish(Message("你还没有牛子呢！"), at_sender=True)
