@@ -1,17 +1,15 @@
-from decimal import Decial as de
 from pathlib import Path
-import random
-import time
 
 import aiofiles
 from arclet.alconna import Args
 from nonebot import get_driver
 from nonebot.plugin import PluginMetadata
-from nonebot_plugin_alconna import Alconna, AlconnaQuery, Query, on_alconna, Text
+from nonebot_plugin_alconna import Alconna, AlconnaQuery, Query, Text, on_alconna
 from nonebot_plugin_uninfo import Uninfo
 
 from zhenxun.configs.utils import PluginExtraData
 
+from .data_source import NiuNiu
 from .database import Sqlite
 
 # from .data_source import *
@@ -82,21 +80,22 @@ driver = get_driver()
 
 @driver.on_startup
 async def handle_connect():
-    await (await Sqlite.init())._init_table()
+    await Sqlite.init()
     old_data_path = Path(__file__).resolve().parent / "data" / "long.json"
     if old_data_path.exists():
         async with aiofiles.open(old_data_path, encoding="utf-8") as f:
             file_data = f.read()
         await Sqlite.json2db(file_data)
+        old_data_path.unlink()
 
 
 @niuzi_register.handle()
 async def _(session: Uninfo):
     uid = str(session.user.id)
-    long = ""# TODO: EDIT THIS #random_long()
-    if await Sqlite.insert("user", {"uid": uid, "length": long, "sex": "boy"},
-                           {"uid": uid}
-                           ):
+    long = NiuNiu.random_length()
+    if await Sqlite.insert(
+        "user", {"uid": uid, "length": long, "sex": "boy"}, {"uid": uid}
+    ):
         await niuzi_register.send(
             Text(f"牛牛长出来啦！足足有{long}cm呢"), at_sender=True
         )

@@ -6,7 +6,6 @@
 # import time
 # from PIL import Image
 # from io import BytesIO
-# from decimal import Decimal as de
 # from pathlib import Path
 # from models.group_member_info import GroupInfoUser
 # from utils.image_utils import BuildMat
@@ -14,6 +13,36 @@
 # from typing import List, Union
 # import numpy as np
 # from concurrent.futures import ThreadPoolExecutor
+from .database import Sqlite
+
+
+class NiuNiu:
+
+    @classmethod
+    async def get_length(cls, uid: str) -> str | None:
+        data = Sqlite.query("users", columns=["length"], conditions={"uid": uid})
+        return data["length"] if isinstance(data, dict) else None
+
+    @classmethod
+    async def random_length(cls) -> str:
+        # 获取所有 length 值
+        sql = "SELECT length FROM users ORDER BY length"
+        results = await Sqlite.exec(sql)
+
+        if not results:
+            origin_length = 10
+        else:
+            length_values = [row[0] for row in results]
+            n = len(length_values)
+
+            if n == 1:
+                origin_length = length_values[0]  # 数据量为1
+
+            # 计算30%中位数的位置
+            index = int(n * 0.3)
+
+            origin_length = float(length_values[index])
+        return str(round(origin_length*0.9, 2))
 
 
 # def pic2b64(pic: Image) -> str:

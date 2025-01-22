@@ -1,20 +1,13 @@
 from datetime import datetime
 
 import aiosqlite
-import ujson
 
 
 class Sqlite:
     @classmethod
-    async def init(cls):
+    async def init(cls) -> None:
         cls.conn = await aiosqlite.connect("data.db")
-        await cls._init_table()
-        return cls
-
-    @classmethod
-    async def _init_table(cls):
-        async with cls.conn.cursor() as cursor:
-            await cursor.execute("""
+        await cls.exec("""
                 CREATE TABLE IF NOT EXISTS users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     uid TEXT NOT NULL,
@@ -23,27 +16,49 @@ class Sqlite:
                     time TEXT NOT NULL
                 )
             """)
-            await cls.conn.commit()
 
     @classmethod
-    async def json2db(cls, file_data):
+    async def exec(cls, sql: str, *args) -> list[dict] | None:
+        """
+        执行自定义 SQL 语句并返回结果。
+
+        :param sql: 要执行的 SQL 语句。
+        :param args: SQL 语句中的参数。
+        :return: 查询结果的字典列表，如果是非查询语句则返回 None。
+        """
+        async with cls.conn.cursor() as cursor:
+            await cursor.execute(sql, args)
+            if sql.strip().upper().startswith("SELECT"):
+                results = await cursor.fetchall()
+                if not results:
+                    return None
+                column_names = [description[0] for description in cursor.description]
+                return [dict(zip(column_names, row)) for row in results]
+            else:
+                await cls.conn.commit()
+                return None
+
+    @classmethod
+    async def json2db(cls, file_data) -> None:
         async with cls.conn.cursor() as cursor:
             await cursor.execute("DELETE FROM users")
             await cls.conn.commit()
-        mixed_data  = []
+        mixed_data = []
         for users in file_data:
             mixed_data.extend(
                 {
                     "uid": user_id,
-                    "length": user_length,  # 默认长度为 0
-                    "sex": "boy" if user_id > 0 else "girl",
+                    "length": user_length,
+                    "sex": "boy" if user_length > 0 else "girl",
                     "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 }
                 for user_id, user_length in users.items()
             )
 
     @classmethod
-    async def query(cls, table, columns=None, conditions=None, fetch_one=True):
+    async def query(
+        cls, table, columns=None, conditions=None, fetch_one=True
+    ) -> dict | list[dict] | None:
         """
         根据条件查询数据。
 
@@ -51,7 +66,7 @@ class Sqlite:
         :param columns: 要查询的列名列表，如果不指定则查询所有列。
         :param conditions: 查询条件，字典格式，键为字段名，值为条件值。
         :param fetch_one: 是否只获取单条记录，默认为 True。
-        :return: 查询结果的 JSON 格式。
+        :return: 查询结果的字典。
         """
         columns_str = ", ".join(columns) if columns else "*"
         query = f"SELECT {columns_str} FROM {table}"
@@ -66,18 +81,13 @@ class Sqlite:
             )
             result = await cursor.fetchone() if fetch_one else await cursor.fetchall()
             if not result:
-                return (
-                    ujson.dumps({}, ensure_ascii=False)
-                    if fetch_one
-                    else ujson.dumps([], ensure_ascii=False)
-                )
+                return None if fetch_one else {}
             column_names = [description[0] for description in cursor.description]
-            json_result = (
+            return (
                 dict(zip(column_names, result))
                 if fetch_one
                 else [dict(zip(column_names, row)) for row in result]
             )
-            return ujson.dumps(json_result, ensure_ascii=False)
 
     @classmethod
     async def insert(cls, table, data, conditions=None):
