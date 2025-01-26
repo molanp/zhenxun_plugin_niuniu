@@ -22,11 +22,10 @@ class NiuNiu:
     @classmethod
     async def get_length(cls, uid: str) -> str | None:
         data = Sqlite.query("users", columns=["length"], conditions={"uid": uid})
-        return data["length"] if isinstance(data, dict) else None
+        return data[0]["length"] if isinstance(data, list) else None
 
     @classmethod
     async def random_length(cls) -> str:
-        # 获取所有 length 值
         sql = "SELECT length FROM users ORDER BY length"
         results = await Sqlite.exec(sql)
 
@@ -41,6 +40,64 @@ class NiuNiu:
             index = int(n * 0.3)
             origin_length = float(length_values[index])
         return str(round(origin_length * 0.9, 2))
+
+    @classmethod
+    async def latest_gluing_time(cls, uid: str) -> str:
+        data = await Sqlite.query(
+            "records",
+            columns=["time"],
+            conditions={"uid": uid, "action": "gluing"},
+            order_by="time DESC",
+            limit=1
+        )
+        return data[0]["time"] if data else "暂无记录"
+    @classmethod
+    async def get_nearest_lengths(cls, target_length: float) -> list[float]:
+        # 查询比 target_length 大的最小值
+        sql_greater = """
+            SELECT MIN(length) AS length FROM users
+            WHERE length > ?
+        """
+        result_greater = await Sqlite.exec(sql_greater, target_length)
+
+        # 查询比 target_length 小的最大值
+        sql_less = """
+            SELECT MAX(length) AS length FROM users
+            WHERE length < ?
+        """
+        result_less = await Sqlite.exec(sql_less, target_length)
+
+        # 提取结果
+        greater_length = (
+            result_greater[0]["length"]
+            if result_greater and result_greater[0]["length"] is not None
+            else 0
+        )
+        less_length = (
+            result_less[0]["length"]
+            if result_less and result_less[0]["length"] is not None
+            else 0
+        )
+
+        return [greater_length, less_length]
+
+    @classmethod
+    async def gluing(
+        cls, uid: str, origin_length: float
+    ) -> tuple[float, float]:
+        result = await cls.get_nearest_lengths(origin_length)
+        if result[0] != 0 or result[1] != 0:
+            new_length = origin_length + result[0] * 0.3 - result[1] * 0.6
+            return round(new_length, 2), round(new_length - origin_length, 2)
+
+        if origin_length <= 0:
+            prob = random.choice([-1.1, -1, -1, -1, -1, 1, 1, 1, 1])
+            diff = prob * 0.1 * origin_length + 1
+        else:
+            prob = random.choice([1, 1, 1, 1, 1, 0.9, -1, -1, -1, -1, -1, -1.4])
+            diff = prob * 0.1 * origin_length - 1
+        new_length = origin_length + diff
+        return round(new_length, 2), round(new_length - origin_length, 2)
 
     @classmethod
     async def comment(cls, length: float) -> str:
@@ -75,7 +132,7 @@ class NiuNiu:
                     "不哭不哭,摸摸头,虽然很难再长出来,但是请不要伤心啦啊!",
                     "加油加油!我看好你哦!",
                     "你醒啦？你现在已经是一名女孩子啦!",
-                    "成为香香软软的女孩子吧!"
+                    "成为香香软软的女孩子吧!",
                 ]
             )
         elif 0 < length <= 10:

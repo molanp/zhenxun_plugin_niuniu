@@ -4,7 +4,7 @@ from zhenxun.configs.utils import PluginExtraData
 
 from .handler import (
     niuniu_deep_rank,  # noqa: F401
-    niuniu_delete,  # noqa: F401
+    niuniu_unsubscribe,  # noqa: F401
     niuniu_fencing,  # noqa: F401
     niuniu_hit_glue,  # noqa: F401
     niuniu_length_rank,  # noqa: F401

@@ -78,37 +78,42 @@ class Sqlite:
         table: str,
         columns: list | None = None,
         conditions: dict | None = None,
-        fetch_one: bool = True,
-    ) -> dict | list[dict] | None:
+        order_by: str | None = None,
+        limit: int | None = None,
+    ) -> list[dict] | None:
         """
         根据条件查询数据。
 
         :param table: 要查询的表名。
         :param columns: 要查询的列名列表，如果不指定则查询所有列。
         :param conditions: 查询条件，字典格式，键为字段名，值为条件值。
-        :param fetch_one: 是否只获取单条记录，默认为 True。
-        :return: 查询结果的字典。
+        :param order_by: 排序条件，例如 "time DESC"。
+        :param limit: 限制结果数量。
+        :return: 查询结果的字典列表。
         """
         columns_str = ", ".join(columns) if columns else "*"
         query = f"SELECT {columns_str} FROM {table}"
+
         if conditions:
             query += " WHERE " + " AND ".join(
                 [f"{key} = ?" for key in conditions.keys()]
             )
 
+        if order_by:
+            query += f" ORDER BY {order_by}"
+
+        if limit is not None:
+            query += f" LIMIT {limit}"
+
         async with cls.conn.cursor() as cursor:
             await cursor.execute(
                 query, tuple(conditions.values()) if conditions else ()
             )
-            result = await cursor.fetchone() if fetch_one else await cursor.fetchall()
+            result = await cursor.fetchall()
             if not result:
                 return None
             column_names = [description[0] for description in cursor.description]
-            return (
-                dict(zip(column_names, result))
-                if fetch_one
-                else [dict(zip(column_names, row)) for row in result]
-            )
+            return [dict(zip(column_names, row)) for row in result]
 
     @classmethod
     async def insert(
@@ -123,7 +128,7 @@ class Sqlite:
         :return: 插入成功返回 True，否则返回 False。
         """
         data["time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        if conditions and await cls.query(table, conditions=conditions, fetch_one=True):
+        if conditions and await cls.query(table, conditions=conditions):
             return False
 
         columns = ", ".join(data.keys())

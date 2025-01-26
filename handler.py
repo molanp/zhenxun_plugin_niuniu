@@ -1,6 +1,9 @@
 from pathlib import Path
+import random
+import time
 
 import aiofiles
+import contextlib
 from arclet.alconna import Args
 from nonebot import get_driver
 from nonebot_plugin_alconna import Alconna, Image, Text, on_alconna
@@ -18,7 +21,7 @@ niuniu_register = on_alconna(
     priority=5,
     block=True,
 )
-niuniu_delete = on_alconna(
+niuniu_unsubscribe = on_alconna(
     Alconna("注销牛牛"),
     priority=5,
     block=True,
@@ -64,7 +67,7 @@ async def _(session: Uninfo):
 
 
 group_user_jj = {}
-group_hit_glue = {}
+user_hit_glue_time_map = {}
 
 driver = get_driver()
 
@@ -83,30 +86,53 @@ async def handle_connect():
 @niuniu_register.handle()
 async def _(session: Uninfo):
     uid = str(session.user.id)
-    long = await NiuNiu.random_length()
+    length = await NiuNiu.random_length()
     if await Sqlite.insert(
-        "users", {"uid": uid, "length": long, "sex": "boy"}, {"uid": uid}
+        "users", {"uid": uid, "length": length, "sex": "boy"}, {"uid": uid}
     ):
+        await Sqlite.insert(
+            "records",
+            {
+                "uid": uid,
+                "origin_length": 0,
+                "diff": length,
+                "new_length": length,
+                "action": "register",
+            },
+        )
         await niuniu_register.send(
-            Text(f"牛牛长出来啦！足足有{long}cm呢"), reply_to=True
+            Text(f"牛牛长出来啦！足足有{length}cm呢"), reply_to=True
         )
     else:
         await niuniu_register.send(Text("你已经有过牛牛啦！"), reply_to=True)
 
 
-@niuniu_delete.handle()
+@niuniu_unsubscribe.handle()
 async def _(session: Uninfo):
     uid = str(session.user.id)
-    if not await Sqlite.query("users", ["uid"], {"uid": uid}):
-        await niuniu_delete.send(Text("你还没有牛牛呢！"), reply_to=True)
+    length = await Sqlite.query("users", ["length"], {"uid": uid})
+    if not length:
+        await niuniu_unsubscribe.send(Text("你还没有牛牛呢！"), reply_to=True)
         return
     gold = (await UserConsole.get_user(uid)).gold
     if gold < 50:
-        await niuniu_delete.send(Text("你的金币不足，无法注销牛牛！"), reply_to=True)
+        await niuniu_unsubscribe.send(
+            Text("你的金币不足，无法注销牛牛！"), reply_to=True
+        )
     else:
         await UserConsole.reduce_gold(uid, 50, GoldHandle.PLUGIN, "niuniu")
         await Sqlite.delete("users", {"uid": uid})
-        await niuniu_delete.finish(Text("从今往后你就没有牛牛啦！"), reply_to=True)
+        await Sqlite.insert(
+            "records",
+            {
+                "uid": uid,
+                "origin_length": round(length[0]["length"]),
+                "diff": -round(length[0]["length"]),
+                "new_length": 0,
+                "action": "unsubscribe",
+            },
+        )
+        await niuniu_unsubscribe.finish(Text("从今往后你就没有牛牛啦！"), reply_to=True)
 
 
 # @niuniu_fencing.handle()
@@ -221,6 +247,7 @@ async def _(session: Uninfo):
             "rank": rank,
             "my_length": user["length"],
             "difference": round(next_length - user["length"], 2),
+            "latest_gluing_time": await NiuNiu.latest_gluing_time(uid),
             "comment": await NiuNiu.comment(user["length"]),
         }
     else:
@@ -229,6 +256,7 @@ async def _(session: Uninfo):
             "rank": user["rank"],
             "my_length": user["length"],
             "difference": 0,
+            "latest_gluing_time": await NiuNiu.latest_gluing_time(uid),
             "comment": await NiuNiu.comment(user["length"]),
         }
     template_dir = Path(__file__).resolve().parent / "templates"
@@ -290,83 +318,88 @@ async def _(session: Uninfo):
 #         await niuniu_deep_rank.finish(Message("暂无此排行榜数据..."), at_sender=True)
 
 
-# @niuniu_hit_glue.handle()
-# async def _(event: GroupMessageEvent):
-#     qq = str(event.user_id)
-#     group = str(event.group_id)
-#     global group_hit_glue
-#     try:
-#         if group_hit_glue[group]:
-#             pass
-#     except KeyError:
-#         group_hit_glue[group] = {}
-#     try:
-#         if group_hit_glue[group][qq]:
-#             pass
-#     except KeyError:
-#         group_hit_glue[group][qq] = {}
-#     try:
-#         time_pass = int(time.time() - group_hit_glue[group][qq]["time"])
-#         if time_pass < 180:
-#             time_rest = 180 - time_pass
-#             glue_refuse = [
-#                 f"才过去了{time_pass}s时间,你就又要打🦶了，身体受得住吗",
-#                 f"不行不行，你的身体会受不了的，歇{time_rest}s再来吧",
-#                 f"休息一下吧，会炸膛的！{time_rest}s后再来吧",
-#                 f"打咩哟，你的牛牛会爆炸的，休息{time_rest}s再来吧",
-#             ]
-#             await niuniu_hit_glue.finish(random.choice(glue_refuse), at_sender=True)
-#     except KeyError:
-#         pass
-#     try:
-#         content = ReadOrWrite("data/long.json")
-#         my_long = de(str(content[group][qq]))
-#         group_hit_glue[group][qq]["time"] = time.time()
-#         probability = random.randint(1, 100)
-#         if 0 < probability <= 40:
-#             reduce = abs(hit_glue(my_long))
-#             my_long += reduce
-#             result = random.choice(
-#                 [
-#                     f"你嘿咻嘿咻一下，促进了牛牛发育，牛牛增加{reduce}cm了呢！",
-#                     f"你打了个舒服痛快的🦶呐，牛牛增加了{reduce}cm呢！",
-#                 ]
-#             )
-#         elif 40 < probability <= 60:
-#             result = random.choice(
-#                 [
-#                     "你打了个🦶，但是什么变化也没有，好奇怪捏~",
-#                     "你的牛牛刚开始变长了，可过了一会又回来了，什么变化也没有，好奇怪捏~",
-#                 ]
-#             )
-#         else:
-#             reduce = abs(hit_glue(my_long))
-#             my_long -= reduce
-#             if my_long < 0:
-#                 result = random.choice(
-#                     [
-#                         f"哦吼！？看来你的牛牛凹进去了{reduce}cm呢！",
-#                         f"你突发恶疾！你的牛牛凹进去了{reduce}cm！",
-#                         f"笑死，你因为打🦶过度导致牛牛凹进去了{reduce}cm！🤣🤣🤣",
-#                     ]
-#                 )
-#             else:
-#                 result = random.choice(
-#                     [
-#                         f"阿哦，你过度打🦶，牛牛缩短{reduce}cm了呢！",
-#                         f"你的牛牛变长了很多，你很激动地继续打🦶，然后牛牛缩短了{reduce}cm呢！",
-#                         f"小打怡情，大打伤身，强打灰飞烟灭！你过度打🦶，牛牛缩短了{reduce}cm捏！",
-#                     ]
-#                 )
-#         content[group][qq] = my_long
-#         ReadOrWrite("data/long.json", content)
-#     except KeyError:
-#         if (
-#             group in group_hit_glue
-#             and qq in group_hit_glue[group]
-#             and "time" in group_hit_glue[group][qq]
-#         ):
-#             del group_hit_glue[group][qq]["time"]
-#         result = random.choice(["你还没有牛牛呢！不能打胶！", "无牛牛，打胶不要的"])
-#     finally:
-#         await niuniu_hit_glue.finish(Message(result), at_sender=True)
+@niuniu_hit_glue.handle()
+async def _(session: Uninfo):
+    global user_hit_glue_time_map
+    uid = str(session.user.id)
+    origin_length = await Sqlite.query("users", ["length"], {"uid": uid})
+    if not origin_length:
+        await niuniu_hit_glue.send(
+            Text(random.choice(["你还没有牛牛呢！不能打胶！", "无牛牛，打胶不要的"])),
+            reply_to=True,
+        )
+        return
+    new_length = origin_length = origin_length[0]["length"]
+    reduce_ = 0
+    with contextlib.suppress(KeyError):
+        time_pass = int(time.time() - user_hit_glue_time_map[uid])
+        if time_pass < 180:
+            time_rest = 180 - time_pass
+            glue_refuse = [
+                f"才过去了{time_pass}s时间,你就又要打🦶了，身体受得住吗",
+                f"不行不行，你的身体会受不了的，歇{time_rest}s再来吧",
+                f"休息一下吧，会炸膛的！{time_rest}s后再来吧",
+                f"打咩哟，你的牛牛会爆炸的，休息{time_rest}s再来吧",
+            ]
+            await niuniu_hit_glue.send(random.choice(glue_refuse), reply_to=True)
+            return
+    user_hit_glue_time_map[uid] = time.time()
+    prob = random.choice([1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, -1, -1, -1])
+    if prob == 1:
+        new_length, reduce = await NiuNiu.gluing(uid, origin_length)
+        result = random.choice(
+            [
+                f"你嘿咻嘿咻一下，促进了牛牛发育，牛牛增加了{reduce}cm了呢！🎉",
+                f"你打了个舒服痛快的🦶呐，牛牛增加了{reduce}cm呢！💪",
+                f"哇哦！你的一脚让牛牛长高了{reduce}cm！👏",
+                f"你的牛牛感受到了你的热情，增长了{reduce}cm！🔥",
+                f"你的一脚仿佛有魔力，牛牛增长了{reduce}cm！✨",
+            ]
+        )
+    elif prob == 0:
+        result = random.choice(
+            [
+                "你打了个🦶，但是什么变化也没有，好奇怪捏~🤷‍♂️",
+                "你的牛牛刚开始变长了，可过了一会又回来了，什么变化也没有，好奇怪捏~🤷‍♀️",
+                "你的一脚仿佛被牛牛躲开了，没有任何变化！😄",
+                "你的牛牛看起来很开心，但没有变化！😊",
+                "你的一🦶仿佛被牛牛用尾巴挡住了，没有任何变化！💃",
+            ]
+        )
+    else:
+        new_length, reduce_ = await NiuNiu.gluing(uid, origin_length)
+        reduce = abs(reduce_)
+        if new_length < 0:
+            result = random.choice(
+                [
+                    f"哦吼！？看来你的牛牛凹进去了{reduce}cm呢！😱",
+                    f"你突发恶疾！你的牛牛凹进去了{reduce}cm！😨",
+                    f"笑死，你因为打🦶过度导致牛牛凹进去了{reduce}cm！🤣🤣🤣",
+                    f"你的牛牛仿佛被你一🦶踢进了地缝，凹进去了{reduce}cm！🕳️",
+                    f"你的一🦶太重了，牛牛凹进去了{reduce}cm！💥",
+                ]
+            )
+        else:
+            result = random.choice(
+                [
+                    f"阿哦，你过度打🦶，牛牛缩短了{reduce}cm了呢！😢",
+                    f"你的牛牛变长了很多，你很激动地继续打🦶，然后牛牛缩短了{reduce}cm呢！🤦‍♂️",
+                    f"小打怡情，大打伤身，强打灰飞烟灭！你过度打🦶，牛牛缩短了{reduce}cm捏！💥",
+                    f"你的牛牛看起来很受伤，缩短了{reduce}cm！🤕",
+                    f"你的打🦶没效果，于是很气急败坏地继续打🦶，然后牛牛缩短了{reduce}cm呢！🤦‍♂️",
+                ]
+            )
+
+    await Sqlite.update("users", {"length": new_length}, {"uid": uid})
+    await Sqlite.insert(
+        "records",
+        {
+            "uid": uid,
+            "origin_length": origin_length,
+            "diff": reduce_,
+            "new_length": new_length,
+            "action": "gluing",
+        },
+    )
+
+    await niuniu_hit_glue.send(Text(result), reply_to=True)
