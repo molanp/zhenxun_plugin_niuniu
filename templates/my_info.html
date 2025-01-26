@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>牛牛信息</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+        }
+        .info-card {
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 400px;
+            min-height: 150px;
+            margin: auto;
+        }
+        .info-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .info-item {
+            margin-bottom: 5px;
+        }
+        .info-item span {
+            font-weight: bold;
+        }
+        .male { color: blue; }
+        .female { color: pink; }
+        .negative-length { color: red; }
+        .positive-length { color: green; }
+    </style>
+</head>
+<body>
+    <div class="info-card">
+        <div class="info-title">{{ name }}の牛牛信息</div>
+        <div class="info-item"><span>排名:</span> #{{ rank }}</div>
+        <div class="info-item">
+            <span>性别:</span>
+            <span class="{{ 'male' if my_length > 0 else 'female' }}">
+                {{ '♂️' if my_length > 0 else '♀️' }}
+            </span>
+        </div>
+        <div class="info-item">
+            <span>{{ '深' if my_length < 0 else '长' }}度:</span>
+            <span class="{{ 'negative-length' if my_length < 0 else 'positive-length' }}">
+                {{ my_length | abs if my_length < 0 else my_length }}cm
+            </span>
+        </div>
+        <div class="info-item"><span>与上一名差距:</span> {{ difference }}cm</div>
+        <div class="info-item"><span>备注:</span> {{ comment }}</div>
+    </div>
+</body>
+</html>

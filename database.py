@@ -1,4 +1,6 @@
 from datetime import datetime
+import os
+from pathlib import Path
 
 import aiosqlite
 
@@ -6,16 +8,31 @@ import aiosqlite
 class Sqlite:
     @classmethod
     async def init(cls) -> None:
-        cls.conn = await aiosqlite.connect("data.db")
+        os.makedirs(Path(__file__).resolve().parent / "data", exist_ok=True)
+        cls.conn = await aiosqlite.connect(
+            Path(__file__).resolve().parent / "data" / "data.db"
+        )
         await cls.exec("""
                 CREATE TABLE IF NOT EXISTS users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     uid TEXT NOT NULL,
                     length INTEGER NOT NULL,
                     sex TEXT NOT NULL,
-                    time TEXT NOT NULL
+                    time DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+        await cls.exec("""
+                CREATE TABLE IF NOT EXISTS records (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    uid TEXT NOT NULL,
+                    action TEXT NOT NULL,
+                    origin_length INTEGER NOT NULL,
+                    diff INTEGER NOT NULL,
+                    new_length INTEGER NOT NULL,
+                    time DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+        await cls.exec("CREATE INDEX IF NOT EXISTS idx_length ON users(length DESC)")
 
     @classmethod
     async def exec(cls, sql: str, *args) -> list[dict] | None:
@@ -28,7 +45,7 @@ class Sqlite:
         """
         async with cls.conn.cursor() as cursor:
             await cursor.execute(sql, args)
-            if sql.strip().upper().startswith("SELECT"):
+            if "SELECT" in sql.strip().upper():
                 results = await cursor.fetchall()
                 if not results:
                     return None
@@ -57,7 +74,11 @@ class Sqlite:
 
     @classmethod
     async def query(
-        cls, table, columns=None, conditions=None, fetch_one=True
+        cls,
+        table: str,
+        columns: list | None = None,
+        conditions: dict | None = None,
+        fetch_one: bool = True,
     ) -> dict | list[dict] | None:
         """
         根据条件查询数据。
@@ -81,7 +102,7 @@ class Sqlite:
             )
             result = await cursor.fetchone() if fetch_one else await cursor.fetchall()
             if not result:
-                return None if fetch_one else {}
+                return None
             column_names = [description[0] for description in cursor.description]
             return (
                 dict(zip(column_names, result))
@@ -90,7 +111,9 @@ class Sqlite:
             )
 
     @classmethod
-    async def insert(cls, table, data, conditions=None):
+    async def insert(
+        cls, table: str, data: dict, conditions: dict | None = None
+    ) -> bool:
         """
         插入数据到指定表中。如果提供了条件，则先检查是否存在符合条件的记录，如果存在则不插入。
 
@@ -112,37 +135,37 @@ class Sqlite:
         return True
 
     @classmethod
-    async def update(cls, table, data, conditions):
+    async def update(cls, table: str, data: dict, conditions: dict) -> bool:
         """
         更新符合条件的数据。
 
         :param table: 要更新数据的表名。
         :param data: 要更新的数据，字典格式，键为字段名，值为数据值。
         :param conditions: 更新条件，字典格式，键为字段名，值为条件值。
-        :return: 更新成功的消息。
+        :return: True
         """
-        set_clause = ", ".join([f"{key} = ?" for key in data.keys()])
-        where_clause = " AND ".join([f"{key} = ?" for key in conditions.keys()])
+        set_clause = ", ".join([f"{key} = ?" for key in data])
+        where_clause = " AND ".join([f"{key} = ?" for key in conditions])
         query = f"UPDATE {table} SET {set_clause} WHERE {where_clause}"
         async with cls.conn.cursor() as cursor:
             await cursor.execute(
                 query, tuple(list(data.values()) + list(conditions.values()))
             )
             await cls.conn.commit()
-        return "Record updated"
+        return True
 
     @classmethod
-    async def delete(cls, table, conditions):
+    async def delete(cls, table: str, conditions: dict) -> bool:
         """
         删除符合条件的数据。
 
         :param table: 要删除数据的表名。
         :param conditions: 删除条件，字典格式，键为字段名，值为条件值。
-        :return: 删除成功的消息。
+        :return: True
         """
-        where_clause = " AND ".join([f"{key} = ?" for key in conditions.keys()])
+        where_clause = " AND ".join([f"{key} = ?" for key in conditions])
         query = f"DELETE FROM {table} WHERE {where_clause}"
         async with cls.conn.cursor() as cursor:
             await cursor.execute(query, tuple(conditions.values()))
             await cls.conn.commit()
-        return "Record deleted"
+        return True

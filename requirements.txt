@@ -1,2 +1,3 @@
 aiosqlite
 aiofiles
+nonebot_plugin_htmlrender

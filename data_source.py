@@ -13,11 +13,12 @@
 # from typing import List, Union
 # import numpy as np
 # from concurrent.futures import ThreadPoolExecutor
+import random
+
 from .database import Sqlite
 
 
 class NiuNiu:
-
     @classmethod
     async def get_length(cls, uid: str) -> str | None:
         data = Sqlite.query("users", columns=["length"], conditions={"uid": uid})
@@ -32,17 +33,89 @@ class NiuNiu:
         if not results:
             origin_length = 10
         else:
-            length_values = [row[0] for row in results]
+            length_values = [row["length"] for row in results]
             n = len(length_values)
 
             if n == 1:
-                origin_length = length_values[0]  # 数据量为1
-
-            # 计算30%中位数的位置
+                origin_length = length_values[0]
             index = int(n * 0.3)
-
             origin_length = float(length_values[index])
-        return str(round(origin_length*0.9, 2))
+        return str(round(origin_length * 0.9, 2))
+
+    @classmethod
+    async def comment(cls, length: float) -> str:
+        if length <= -100:
+            return (
+                "哇哦!你已经进化成魅魔了!"
+                "魅魔在击剑时有20%的几率消耗自身长度吞噬对方牛牛呢!"
+            )
+        elif -100 < length <= -50:
+            return "嗯……好像已经穿过了身体吧……从另一面来看也可以算是凸出来的吧？"
+        elif -50 < length <= -25:
+            return random.choice(
+                [
+                    "这名女生,你的身体很健康哦!",
+                    "WOW,真的凹进去了好多呢!",
+                    "你已经是我们女孩子的一员啦!",
+                ]
+            )
+        elif -25 < length <= -10:
+            return random.choice(
+                [
+                    "你已经是一名女生了呢!",
+                    "从女生的角度来说,你发育良好哦!",
+                    "你醒啦?你已经是一名女孩子啦!",
+                    "唔……可以放进去一根手指了都……",
+                ]
+            )
+        elif -10 < length <= 0:
+            return random.choice(
+                [
+                    "安了安了,不要伤心嘛,做女生有什么不好的啊.",
+                    "不哭不哭,摸摸头,虽然很难再长出来,但是请不要伤心啦啊!",
+                    "加油加油!我看好你哦!",
+                    "你醒啦？你现在已经是一名女孩子啦!",
+                    "成为香香软软的女孩子吧!"
+                ]
+            )
+        elif 0 < length <= 10:
+            return random.choice(
+                [
+                    "你行不行啊?细狗!",
+                    "虽然短,但是小小的也很可爱呢.",
+                    "像一只蚕宝宝.",
+                    "长大了.",
+                ]
+            )
+        elif 10 < length <= 25:
+            return random.choice(
+                [
+                    "唔……没话说",
+                    "已经很长了呢!",
+                ]
+            )
+        elif 25 < length <= 50:
+            return random.choice(
+                [
+                    "话说这种真的有可能吗？",
+                    "厚礼谢!",
+                ]
+            )
+        elif 50 < length <= 100:
+            return random.choice(
+                [
+                    "已经突破天际了嘛……",
+                    "唔……这玩意应该不会变得比我高吧？",
+                    "你这个长度会死人的……!",
+                    "你马上要进化成牛头人了!!",
+                    "你是什么怪物,不要过来啊!!",
+                ]
+            )
+        else:
+            return (
+                "惊世骇俗!你已经进化成牛头人了!"
+                "牛头人在击剑时有20%的几率消耗自身长度吞噬对方牛牛呢!"
+            )
 
 
 # def pic2b64(pic: Image) -> str:
@@ -115,8 +188,8 @@ class NiuNiu:
 #     读取或写入文件
 
 #     Args:
-#         file (string): 文件路径，相对于脚本
-#         w (any, optional): 写入内容，不传入则读. Defaults to None.
+#         file (string): 文件路径,相对于脚本
+#         w (any, optional): 写入内容,不传入则读. Defaults to None.
 
 #     Returns:
 #         any: 文件内容(仅读取)
@@ -145,8 +218,8 @@ class NiuNiu:
 #     确定击剑比赛的结果。
 
 #     Args:
-#         my_length (decimal): 我的当前长度，decimal 类型以确保精度。
-#         oppo_length (decimal): 对手的当前长度，decimal 类型以确保精度。
+#         my_length (decimal): 我的当前长度,decimal 类型以确保精度。
+#         oppo_length (decimal): 对手的当前长度,decimal 类型以确保精度。
 #         at_qq (str): 被 @ 的人的 QQ 号码。
 #         my_qq (str): 我的 QQ 号码。
 #         group (str): 当前群号码。
@@ -163,24 +236,24 @@ class NiuNiu:
 #     if oppo_length <= -100 and my_length > 0 and 10 < probability <= 20:
 #         oppo_length *= de(0.85)
 #         my_length -= min(abs(loss_limit * my_length), abs(de(1.5)*my_length))
-#         result = f"对方身为魅魔诱惑了你，你同化成魅魔！当前长度{my_length}cm！"
+#         result = f"对方身为魅魔诱惑了你,你同化成魅魔!当前长度{my_length}cm!"
 
 #     elif oppo_length >= 100 and my_length > 0 and 10 < probability <= 20:
 #         oppo_length *= de(0.85)
 #         my_length -= min(abs(devour_limit * my_length), abs(de(1.5)*my_length))
-#         result = f"对方以牛头人的荣誉摧毁了你的牛牛！当前长度{my_length}cm！"
+#         result = f"对方以牛头人的荣誉摧毁了你的牛牛!当前长度{my_length}cm!"
 
 #     elif my_length <= -100 and oppo_length > 0 and 10 < probability <= 20:
 #         my_length *= de(0.85)
 #         oppo_length -= min(abs(loss_limit * oppo_length),
 #                            abs(de(1.5)*oppo_length))
-#         result = f"你身为魅魔诱惑了对方，吞噬了对方部分长度！当前长度{my_length}cm！"
+#         result = f"你身为魅魔诱惑了对方,吞噬了对方部分长度!当前长度{my_length}cm!"
 
 #     elif my_length >= 100 and oppo_length > 0 and 10 < probability <= 20:
 #         my_length *= de(0.85)
 #         oppo_length -= min(abs(devour_limit * oppo_length),
 #                            abs(de(1.5)*oppo_length))
-#         result = f"你以牛头人的荣誉摧毁了对方的牛牛！当前长度{my_length}cm！"
+#         result = f"你以牛头人的荣誉摧毁了对方的牛牛!当前长度{my_length}cm!"
 
 #     else:
 #         # 通过击剑技巧来决定结果
@@ -250,22 +323,22 @@ class NiuNiu:
 #         oppo -= de(0.8)*reduce
 #         if my < 0:
 #             result = random.choice([
-#                 f"哦吼！？你的牛牛在长大欸！长大了{reduce}cm！",
-#                 f"牛牛凹进去的深度变浅了欸！变浅了{reduce}cm！"
+#                 f"哦吼!？你的牛牛在长大欸!长大了{reduce}cm!",
+#                 f"牛牛凹进去的深度变浅了欸!变浅了{reduce}cm!"
 #             ])
 #         else:
-#             result = f"你以绝对的长度让对方屈服了呢！你的长度增加{reduce}cm，当前长度{my}cm！"
+#             result = f"你以绝对的长度让对方屈服了呢!你的长度增加{reduce}cm,当前长度{my}cm!"
 #     else:
 #         my -= reduce
 #         oppo += de(0.8)*reduce
 #         if my < 0:
 #             result = random.choice([
-#                 f"哦吼！？看来你的牛牛因为击剑而凹进去了呢🤣🤣🤣！凹进去了{reduce}cm！",
-#                 f"由于对方击剑技术过于高超，造成你的牛牛凹了进去呢😰！凹进去了{reduce}cm！",
-#                 f"好惨啊，本来就不长的牛牛现在凹进去了呢😂！凹进去了{reduce}cm！"
+#                 f"哦吼!？看来你的牛牛因为击剑而凹进去了呢🤣🤣🤣!凹进去了{reduce}cm!",
+#                 f"由于对方击剑技术过于高超,造成你的牛牛凹了进去呢😰!凹进去了{reduce}cm!",
+#                 f"好惨啊,本来就不长的牛牛现在凹进去了呢😂!凹进去了{reduce}cm!"
 #             ])
 #         else:
-#             result = f"对方以绝对的长度让你屈服了呢！你的长度减少{reduce}cm，当前长度{my}cm！"
+#             result = f"对方以绝对的长度让你屈服了呢!你的长度减少{reduce}cm,当前长度{my}cm!"
 #     return result, my, oppo
 
 
@@ -298,7 +371,7 @@ class NiuNiu:
 #         :param title: 排行榜标题
 #         :param all_user_id: 所有用户的qq号
 #         :param all_user_data: 所有用户需要排行的对应数据
-#         :param group_id: 群号，用于从数据库中获取该用户在此群的昵称
+#         :param group_id: 群号,用于从数据库中获取该用户在此群的昵称
 #         :param total_count: 获取人数总数
 #     """
 #     _uname_lst = []
