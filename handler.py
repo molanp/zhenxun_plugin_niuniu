@@ -1,17 +1,18 @@
+import contextlib
 from pathlib import Path
 import random
 import time
 
 import aiofiles
-import contextlib
 from arclet.alconna import Args
 from nonebot import get_driver
-from nonebot_plugin_alconna import Alconna, Image, Text, on_alconna
+from nonebot_plugin_alconna import Alconna, Image, Match, Text, on_alconna
 from nonebot_plugin_htmlrender import template_to_pic
 from nonebot_plugin_uninfo import Uninfo
 
 from zhenxun.models.user_console import UserConsole
 from zhenxun.utils.enum import GoldHandle
+from zhenxun.utils.message import MessageUtils
 
 from .data_source import NiuNiu
 from .database import Sqlite
@@ -38,12 +39,22 @@ niuniu_my = on_alconna(
     block=True,
 )
 niuniu_length_rank = on_alconna(
-    Alconna("牛牛长度排行", Args["num?", int]),
+    Alconna("牛牛长度排行", Args["num?", int, 10]),
     priority=5,
     block=True,
 )
 niuniu_deep_rank = on_alconna(
-    Alconna("牛牛深度排行", Args["num?", int]),
+    Alconna("牛牛深度排行", Args["num?", int, 10]),
+    priority=5,
+    block=True,
+)
+niuniu_length_rank_all = on_alconna(
+    Alconna("牛牛长度总排行", Args["num?", int, 10]),
+    priority=5,
+    block=True,
+)
+niuniu_deep_rank_all = on_alconna(
+    Alconna("牛牛深度总排行", Args["num?", int, 10]),
     priority=5,
     block=True,
 )
@@ -201,7 +212,7 @@ async def _(session: Uninfo):
 
 @niuniu_my.handle()
 async def _(session: Uninfo):
-    uid = str(session.user.id)
+    uid = session.user.id
     if not await Sqlite.query("users", ["length"], {"uid": uid}):
         await niuniu_my.send(Text("你还没有牛牛呢！"), reply_to=True)
         return
@@ -268,29 +279,19 @@ async def _(session: Uninfo):
     await niuniu_my.send(Image(raw=pic), reply_to=True)
 
 
-# @niuniu_length_rank.handle()
-# async def _(event: GroupMessageEvent, num: Query[int] = AlconnaQuery("num", 10)):
-#     num = arg.extract_plain_text().strip()
-#     if str(num).isdigit() and 51 > int(num) > 10:
-#         num = int(num)
-#     else:
-#         num = 10
-#     all_users = get_all_users(str(event.group_id))
-#     all_user_id = []
-#     all_user_data = []
-#     for user_id, user_data in all_users.items():
-#         if user_data > 0:
-#             all_user_id.append(int(user_id))
-#             all_user_data.append(user_data)
-
-#     if len(all_user_id) != 0:
-#         rank_image = await init_rank(
-#             "牛牛长度排行榜-单位cm", all_user_id, all_user_data, event.group_id, num
-#         )
-#         if rank_image:
-#             await niuniu_length_rank.finish(image(b64=rank_image.pic2bs4()))
-#     else:
-#         await niuniu_length_rank.finish(Message("暂无此排行榜数据...", at_sender=True))
+@niuniu_length_rank.handle()
+async def _(session: Uninfo, match: Match[int]):
+    if not match.available:
+        match.result = 10
+    if match.result > 50:
+        await MessageUtils.build_message("排行榜人数不能超过50哦...").finish()
+    gid = session.group.id if session.group else None
+    if not gid:
+        await MessageUtils.build_message(
+            "私聊中无法查看 '牛牛长度排行'，请发送 '牛牛长度总排行'"
+        ).finish()
+    image = await NiuNiu.rank(session, match.result, gid)
+    await MessageUtils.build_message(image).send()
 
 
 # @niuniu_deep_rank.handle()
@@ -330,7 +331,6 @@ async def _(session: Uninfo):
         )
         return
     new_length = origin_length = origin_length[0]["length"]
-    reduce_ = 0
     with contextlib.suppress(KeyError):
         time_pass = int(time.time() - user_hit_glue_time_map[uid])
         if time_pass < 180:
@@ -344,16 +344,17 @@ async def _(session: Uninfo):
             await niuniu_hit_glue.send(random.choice(glue_refuse), reply_to=True)
             return
     user_hit_glue_time_map[uid] = time.time()
-    prob = random.choice([1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, -1, -1, -1])
+    prob = random.choice([1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, -1, -1, -1])
+    reduce_ = None
     if prob == 1:
-        new_length, reduce = await NiuNiu.gluing(uid, origin_length)
+        new_length, reduce_ = await NiuNiu.gluing(origin_length)
         result = random.choice(
             [
-                f"你嘿咻嘿咻一下，促进了牛牛发育，牛牛增加了{reduce}cm了呢！🎉",
-                f"你打了个舒服痛快的🦶呐，牛牛增加了{reduce}cm呢！💪",
-                f"哇哦！你的一脚让牛牛长高了{reduce}cm！👏",
-                f"你的牛牛感受到了你的热情，增长了{reduce}cm！🔥",
-                f"你的一脚仿佛有魔力，牛牛增长了{reduce}cm！✨",
+                f"你嘿咻嘿咻一下，促进了牛牛发育，牛牛增加了{reduce_}cm了呢！🎉",
+                f"你打了个舒服痛快的🦶呐，牛牛增加了{reduce_}cm呢！💪",
+                f"哇哦！你的一🦶让牛牛变长了{reduce_}cm！👏",
+                f"你的牛牛感受到了你的热情，增长了{reduce_}cm！🔥",
+                f"你的一脚仿佛有魔力，牛牛增长了{reduce_}cm！✨",
             ]
         )
     elif prob == 0:
@@ -361,13 +362,13 @@ async def _(session: Uninfo):
             [
                 "你打了个🦶，但是什么变化也没有，好奇怪捏~🤷‍♂️",
                 "你的牛牛刚开始变长了，可过了一会又回来了，什么变化也没有，好奇怪捏~🤷‍♀️",
-                "你的一脚仿佛被牛牛躲开了，没有任何变化！😄",
+                "你的一🦶仿佛被牛牛躲开了，没有任何变化！😄",
                 "你的牛牛看起来很开心，但没有变化！😊",
                 "你的一🦶仿佛被牛牛用尾巴挡住了，没有任何变化！💃",
             ]
         )
     else:
-        new_length, reduce_ = await NiuNiu.gluing(uid, origin_length)
+        new_length, reduce_ = await NiuNiu.gluing(origin_length)
         reduce = abs(reduce_)
         if new_length < 0:
             result = random.choice(

@@ -80,7 +80,7 @@ class Sqlite:
         conditions: dict | None = None,
         order_by: str | None = None,
         limit: int | None = None,
-    ) -> list[dict] | None:
+    ) -> list[dict]:
         """
         根据条件查询数据。
 
@@ -111,7 +111,7 @@ class Sqlite:
             )
             result = await cursor.fetchall()
             if not result:
-                return None
+                return []
             column_names = [description[0] for description in cursor.description]
             return [dict(zip(column_names, row)) for row in result]
 

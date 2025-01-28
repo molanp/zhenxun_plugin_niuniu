@@ -15,6 +15,17 @@
 # from concurrent.futures import ThreadPoolExecutor
 import random
 
+from nonebot_plugin_uninfo import Uninfo
+
+from zhenxun.models.friend_user import FriendUser
+from zhenxun.models.group_member_info import GroupInfoUser
+from zhenxun.models.sign_log import SignLog
+from zhenxun.models.sign_user import SignUser
+from zhenxun.models.user_console import UserConsole
+from zhenxun.services.log import logger
+from zhenxun.utils.image_utils import BuildImage, ImageTemplate
+from zhenxun.utils.platform import PlatformUtils
+
 from .database import Sqlite
 
 
@@ -48,9 +59,10 @@ class NiuNiu:
             columns=["time"],
             conditions={"uid": uid, "action": "gluing"},
             order_by="time DESC",
-            limit=1
+            limit=1,
         )
         return data[0]["time"] if data else "暂无记录"
+
     @classmethod
     async def get_nearest_lengths(cls, target_length: float) -> list[float]:
         # 查询比 target_length 大的最小值
@@ -82,9 +94,7 @@ class NiuNiu:
         return [greater_length, less_length]
 
     @classmethod
-    async def gluing(
-        cls, uid: str, origin_length: float
-    ) -> tuple[float, float]:
+    async def gluing(cls, origin_length: float) -> tuple[float, float]:
         result = await cls.get_nearest_lengths(origin_length)
         if result[0] != 0 or result[1] != 0:
             new_length = origin_length + result[0] * 0.3 - result[1] * 0.6
@@ -173,6 +183,82 @@ class NiuNiu:
                 "惊世骇俗!你已经进化成牛头人了!"
                 "牛头人在击剑时有20%的几率消耗自身长度吞噬对方牛牛呢!"
             )
+
+    @classmethod
+    async def rank(
+        cls, session: Uninfo, num: int, group_id: str | None = None, deep: bool = False
+    ) -> BuildImage | str:
+        """牛牛排行
+
+        参数:
+            session: Uninfo
+            num: 排行榜数量
+            group_id: 群组id
+
+        返回:
+            BuildImage: 构造图片
+        """
+        user_length_map = []
+        data_list = []
+        order = "length ASC" if deep else "length DESC"
+        if group_id:
+            user_ids = await GroupInfoUser.get_all_uid(group_id=group_id)
+            print("group_id", group_id)
+            print("user_ids", user_ids)
+            if user_ids:
+                user_data = await Sqlite.query(
+                    table="users",
+                    columns=["uid", "length"],
+                    order_by=order,
+                    limit=num,
+                )
+                for user in user_data:
+                    uid = user["uid"]
+                    length = user["length"]
+                    if uid in user_ids:
+                        print("add", uid, length)
+                        user_length_map.append([uid, length])
+        else:
+            user_data = await Sqlite.query(
+                table="users",
+                columns=["uid", "length"],
+                order_by=order,
+                limit=num,
+            )
+            user_length_map.extend([user["uid"], user["length"]] for user in user_data)
+        if not user_length_map:
+            return "当前还没有人有牛牛哦..."
+        user_id_list = [sublist[0] for sublist in user_length_map]
+
+        if session.user.id in user_id_list:
+            index = user_id_list.index(session.user.id) + 1
+        else:
+            index = "-1（未统计）"
+
+        column_name = ["排名", "头像", "名称", "长度"]
+        friend_list = await FriendUser.filter(
+            user_id__in=user_id_list
+        ).values_list("user_id", "user_name")
+        uid2name = {f[0]: f[1] for f in friend_list}
+        for i, (uid, length) in enumerate(user_length_map):
+            bytes = await PlatformUtils.get_user_avatar(uid, "qq", session.self_id)
+            data_list.append(
+                [
+                    f"{i + 1}",
+                    (bytes, 30, 30),
+                    uid2name.get(uid, "未知用户"),
+                    length,
+                ]
+            )
+
+        if group_id:
+            title = "长度群组内排行"
+            tip = f"你的排名在本群第 {index} 位哦!"
+        else:
+            title = "长度全局排行"
+            tip = f"你的排名在全局第 {index} 位哦!"
+
+        return await ImageTemplate.table_page(title, tip, column_name, data_list)
 
 
 # def pic2b64(pic: Image) -> str:
