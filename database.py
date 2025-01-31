@@ -15,7 +15,7 @@ class Sqlite:
         await cls.exec("""
                 CREATE TABLE IF NOT EXISTS users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    uid TEXT NOT NULL,
+                    uid INTEGER NOT NULL,
                     length INTEGER NOT NULL,
                     sex TEXT NOT NULL,
                     time DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -24,7 +24,7 @@ class Sqlite:
         await cls.exec("""
                 CREATE TABLE IF NOT EXISTS records (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    uid TEXT NOT NULL,
+                    uid INTEGER NOT NULL,
                     action TEXT NOT NULL,
                     origin_length INTEGER NOT NULL,
                     diff INTEGER NOT NULL,
@@ -64,7 +64,7 @@ class Sqlite:
         for users in file_data:
             mixed_data.extend(
                 {
-                    "uid": user_id,
+                    "uid": int(user_id),
                     "length": user_length,
                     "sex": "boy" if user_length > 0 else "girl",
                     "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
