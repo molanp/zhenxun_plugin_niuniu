@@ -61,16 +61,18 @@ class Sqlite:
             await cursor.execute("DELETE FROM users")
             await cls.conn.commit()
         mixed_data = []
-        for users in file_data:
+        for groups in file_data:
             mixed_data.extend(
                 {
                     "uid": int(user_id),
                     "length": user_length,
                     "sex": "boy" if user_length > 0 else "girl",
-                    "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 }
-                for user_id, user_length in users.items()
+                for user_id, user_length in groups.items()
             )
+        for i in mixed_data:
+            if not await cls.insert("users", i, {"uid": i["uid"]}):
+                await cls.update("users", i, {"uid": i["uid"]})
 
     @classmethod
     async def query(
@@ -149,6 +151,7 @@ class Sqlite:
         :param conditions: 更新条件，字典格式，键为字段名，值为条件值。
         :return: True
         """
+        data["time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         set_clause = ", ".join([f"{key} = ?" for key in data])
         where_clause = " AND ".join([f"{key} = ?" for key in conditions])
         query = f"UPDATE {table} SET {set_clause} WHERE {where_clause}"
