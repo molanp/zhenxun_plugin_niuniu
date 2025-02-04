@@ -2,11 +2,20 @@ import contextlib
 from pathlib import Path
 import random
 import time
+from typing import Any
 
 import aiofiles
-from arclet.alconna import Args
+from arclet.alconna import AllParam, Args, CommandMeta
 from nonebot import get_driver
-from nonebot_plugin_alconna import Alconna, Image, Match, Text, on_alconna
+from nonebot_plugin_alconna import (
+    Alconna,
+    At,
+    Image,
+    Match,
+    Text,
+    UniMessage,
+    on_alconna,
+)
 from nonebot_plugin_htmlrender import template_to_pic
 from nonebot_plugin_uninfo import Uninfo
 
@@ -27,12 +36,12 @@ niuniu_unsubscribe = on_alconna(
     priority=5,
     block=True,
 )
-niuniu_fencing = on_alconna(
-    Alconna("击剑", Args["@user"]),
-    aliases={"JJ", "Jj", "jJ"},
-    priority=5,
-    block=True,
-)
+# niuniu_fencing = on_alconna(
+#     Alconna("击剑", Args["at?", AllParam], meta=CommandMeta(compact=True)),
+#     aliases=("JJ", "Jj", "jJ", "jj"),
+#     priority=5,
+#     block=True,
+# )
 niuniu_my = on_alconna(
     Alconna("我的牛牛"),
     priority=5,
@@ -65,8 +74,8 @@ niuniu_hit_glue = on_alconna(
 )
 
 
-group_user_jj = {}
-user_hit_glue_time_map = {}
+user_fence_time_map = {}
+user_gluing_time_map = {}
 
 driver = get_driver()
 
@@ -80,6 +89,7 @@ async def handle_connect():
             file_data = f.read()
         await Sqlite.json2db(file_data)
         old_data_path.unlink()
+    return
 
 
 @niuniu_register.handle()
@@ -135,22 +145,11 @@ async def _(session: Uninfo):
 
 
 # @niuniu_fencing.handle()
-# async def _(event: GroupMessageEvent):
-#     qq = str(event.user_id)
-#     group = str(event.group_id)
-#     global group_user_jj
-#     try:
-#         if group_user_jj[group]:
-#             pass
-#     except KeyError:
-#         group_user_jj[group] = {}
-#     try:
-#         if group_user_jj[group][qq]:
-#             pass
-#     except KeyError:
-#         group_user_jj[group][qq] = {}
-#     try:
-#         time_pass = int(time.time() - group_user_jj[group][qq]["time"])
+# async def _(session: Uninfo, match: Match[Any]):
+#     global user_fence_time_map
+#     uid = session.user.id
+#     with contextlib.suppress(KeyError):
+#         time_pass = int(time.time() - user_fence_time_map[uid])
 #         if time_pass < 180:
 #             time_rest = 180 - time_pass
 #             jj_refuse = [
@@ -159,43 +158,49 @@ async def _(session: Uninfo):
 #                 f"你这种男同就应该被送去集中营！等待{time_rest}s再来吧",
 #                 f"打咩哟！你的牛牛会炸的，休息{time_rest}s再来吧",
 #             ]
-#             await niuniu_fencing.finish(random.choice(jj_refuse), at_sender=True)
-#     except KeyError:
-#         pass
-#     #
-#     msg = event.get_message()
-#     content = ReadOrWrite("data/long.json")
-#     at_list = []
-#     for msg_seg in msg:
-#         if msg_seg.type == "at":
-#             at_list.append(msg_seg.data["qq"])
-#     try:
-#         my_long = de(str(content[group][qq]))
-#         if len(at_list) >= 1:
-#             at = str(at_list[0])
-#             if len(at_list) >= 2:
-#                 result = random.choice(
-#                     ["一战多？你的小身板扛得住吗？", "你不准参加Impart┗|｀O′|┛"]
-#                 )
-#             elif at != qq:
-#                 try:
-#                     opponent_long = de(str(content[group][at]))
-#                     group_user_jj[group][qq]["time"] = time.time()
-#                     result = fencing(my_long, opponent_long, at, qq, group, content)
-#                 except KeyError:
-#                     result = "对方还没有牛牛呢，你不能和ta击剑！"
-#             else:
-#                 result = "不能和自己击剑哦！"
-#         else:
-#             result = "你要和谁击剑？你自己吗？"
-#     except KeyError:
-#         try:
-#             del group_user_jj[group][qq]["time"]
-#         except KeyError:
-#             pass
-#         result = "你还没有牛牛呢！不能击剑！"
-#     finally:
-#         await niuniu_fencing.finish(Message(result), at_sender=True)
+#             await niuniu_fencing.send(random.choice(jj_refuse), reply_to=True)
+#             return
+#     if not match.available:
+#         await niuniu_fencing.send("你要和谁击剑？你自己吗？", reply_to=True)
+#     else:
+#         messages = UniMessage(match.result)
+#         at_list = [
+#             message.data["qq"]
+#             for message in messages
+#             if isinstance(message, At)
+#         ]
+#         await niuniu_fencing.send(Text(str(at_list)))
+
+#     return
+        #
+        # msg = event.get_message()
+        # content = ReadOrWrite("data/long.json")
+        # at_list = []
+        # for msg_seg in msg:
+        #     if msg_seg.type == "at":
+        #         at_list.append(msg_seg.data["qq"])
+        # try:
+        #     my_long = de(str(content[group][qq]))
+        #     if len(at_list) >= 1:
+        #         at = str(at_list[0])
+        #         if len(at_list) >= 2:
+        #             result = random.choice(
+        #                 ["一战多？你的小身板扛得住吗？", "你不准参加Impart┗|｀O′|┛"]
+        #             )
+        #         elif at != qq:
+        #             try:
+        #                 opponent_long = de(str(content[group][at]))
+        #                 group_user_jj[group][qq]["time"] = time.time()
+        #                 result = fencing(my_long, opponent_long, at, qq, group, content)
+        #             except KeyError:
+        #                 result = "对方还没有牛牛呢，你不能和ta击剑！"
+        #         else:
+        #             result = "不能和自己击剑哦！"
+        # except KeyError:
+        #     pass
+        #     result = "你还没有牛牛呢！不能击剑！"
+        # finally:
+        #     await niuniu_fencing.finish(Message(result), at_sender=True)
 
 
 @niuniu_my.handle()
@@ -281,6 +286,7 @@ async def _(bot, session: Uninfo, match: Match[int]):
     image = await NiuNiu.rank(bot, match.result, session)
     await MessageUtils.build_message(image).send()
 
+
 @niuniu_length_rank_all.handle()
 async def _(bot, session: Uninfo, match: Match[int]):
     if not match.available:
@@ -289,6 +295,7 @@ async def _(bot, session: Uninfo, match: Match[int]):
         await MessageUtils.build_message("排行榜人数不能超过50哦...").finish()
     image = await NiuNiu.rank(bot, match.result, session, is_all=True)
     await MessageUtils.build_message(image).send()
+
 
 @niuniu_deep_rank.handle()
 async def _(bot, session: Uninfo, match: Match[int]):
@@ -304,6 +311,7 @@ async def _(bot, session: Uninfo, match: Match[int]):
     image = await NiuNiu.rank(bot, match.result, session, True)
     await MessageUtils.build_message(image).send()
 
+
 @niuniu_deep_rank_all.handle()
 async def _(bot, session: Uninfo, match: Match[int]):
     if not match.available:
@@ -313,10 +321,11 @@ async def _(bot, session: Uninfo, match: Match[int]):
     image = await NiuNiu.rank(bot, match.result, session, is_all=True)
     await MessageUtils.build_message(image).send()
 
+
 @niuniu_hit_glue.handle()
 async def _(session: Uninfo):
-    global user_hit_glue_time_map
-    uid = str(session.user.id)
+    global user_gluing_time_map
+    uid = session.user.id
     origin_length = await Sqlite.query("users", ["length"], {"uid": uid})
     if not origin_length:
         await niuniu_hit_glue.send(
@@ -326,7 +335,7 @@ async def _(session: Uninfo):
         return
     new_length = origin_length = origin_length[0]["length"]
     with contextlib.suppress(KeyError):
-        time_pass = int(time.time() - user_hit_glue_time_map[uid])
+        time_pass = int(time.time() - user_gluing_time_map[uid])
         if time_pass < 180:
             time_rest = 180 - time_pass
             glue_refuse = [
@@ -337,7 +346,7 @@ async def _(session: Uninfo):
             ]
             await niuniu_hit_glue.send(random.choice(glue_refuse), reply_to=True)
             return
-    user_hit_glue_time_map[uid] = time.time()
+    user_gluing_time_map[uid] = time.time()
     prob = random.choice([1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0])
     diff = 0
     if prob == 1:
