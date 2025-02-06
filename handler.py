@@ -1,3 +1,4 @@
+import base64
 import contextlib
 from pathlib import Path
 import random
@@ -13,6 +14,7 @@ from nonebot_plugin_uninfo import Uninfo
 from zhenxun.models.user_console import UserConsole
 from zhenxun.utils.enum import GoldHandle
 from zhenxun.utils.message import MessageUtils
+from zhenxun.utils.platform import PlatformUtils
 
 from .data_source import NiuNiu
 from .database import Sqlite
@@ -254,6 +256,7 @@ async def _(session: Uninfo):
         next_length = user["next_length"]
         next_rank = user["next_rank"]  # noqa: F841
         result = {
+            "avatar": f"data:image/png;base64,{base64.b64encode(await PlatformUtils.get_user_avatar(uid, 'qq', session.self_id)).decode('utf-8')}",
             "name": session.user.name,
             "rank": rank,
             "my_length": user["length"],
@@ -263,6 +266,7 @@ async def _(session: Uninfo):
         }
     else:
         result = {
+            "avatar": f"data:image/png;base64,{base64.b64encode(await PlatformUtils.get_user_avatar(uid, 'qq', session.self_id)).decode('utf-8')}",
             "name": session.user.name,
             "rank": user["rank"],
             "my_length": user["length"],
