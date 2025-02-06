@@ -17,12 +17,6 @@ import random
 
 from nonebot_plugin_uninfo import Uninfo
 
-from zhenxun.models.friend_user import FriendUser
-from zhenxun.models.group_member_info import GroupInfoUser
-from zhenxun.models.sign_log import SignLog
-from zhenxun.models.sign_user import SignUser
-from zhenxun.models.user_console import UserConsole
-from zhenxun.services.log import logger
 from zhenxun.utils.image_utils import BuildImage, ImageTemplate
 from zhenxun.utils.platform import PlatformUtils
 
@@ -31,7 +25,7 @@ from .database import Sqlite
 
 class NiuNiu:
     @classmethod
-    async def get_length(cls, uid: str) -> str | None:
+    async def get_length(cls, uid: int) -> str | None:
         data = Sqlite.query("users", columns=["length"], conditions={"uid": uid})
         return data[0]["length"] if isinstance(data, list) else None
 
@@ -53,7 +47,7 @@ class NiuNiu:
         return str(round(origin_length * 0.9, 2))
 
     @classmethod
-    async def latest_gluing_time(cls, uid: str) -> str:
+    async def latest_gluing_time(cls, uid: int) -> str:
         data = await Sqlite.query(
             "records",
             columns=["time"],
@@ -186,25 +180,29 @@ class NiuNiu:
 
     @classmethod
     async def rank(
-        cls, session: Uninfo, num: int, group_id: str | None = None, deep: bool = False
+        cls, bot, num: int, session: Uninfo, deep: bool = False, is_all: bool = False
     ) -> BuildImage | str:
         """牛牛排行
 
         参数:
-            session: Uninfo
+            bot: Bot
             num: 排行榜数量
-            group_id: 群组id
-
+            session: Uninfo
+            deep: 是否深度排行
+            is_all: 是否显示所有用户
         返回:
             BuildImage: 构造图片
         """
         user_length_map = []
+        uid2name = {}
         data_list = []
         order = "length ASC" if deep else "length DESC"
-        if group_id:
-            user_ids = await GroupInfoUser.get_all_uid(group_id=group_id)
-            print("group_id", group_id)
-            print("user_ids", user_ids)
+        if not is_all and session.group:
+            user_ids = {
+                user["user_id"]: user["nickname"]
+                for user in await bot.get_group_member_list(group_id=session.group.id)
+            }
+            uid2name = user_ids.copy()
             if user_ids:
                 user_data = await Sqlite.query(
                     table="users",
@@ -215,8 +213,9 @@ class NiuNiu:
                 for user in user_data:
                     uid = user["uid"]
                     length = user["length"]
-                    if uid in user_ids:
-                        print("add", uid, length)
+                    if uid in user_ids and (
+                        (deep and length <= 0) or (not deep and length >= 0)
+                    ):
                         user_length_map.append([uid, length])
         else:
             user_data = await Sqlite.query(
@@ -225,65 +224,41 @@ class NiuNiu:
                 order_by=order,
                 limit=num,
             )
-            user_length_map.extend([user["uid"], user["length"]] for user in user_data)
+            user_length_map.extend(
+                [user["uid"], user["length"]]
+                for user in user_data
+                if (deep and user["length"] <= 0) or (not deep and user["length"] > 0)
+            )
         if not user_length_map:
             return "当前还没有人有牛牛哦..."
         user_id_list = [sublist[0] for sublist in user_length_map]
 
-        if session.user.id in user_id_list:
-            index = user_id_list.index(session.user.id) + 1
+        if int(session.user.id) in user_id_list:
+            index = user_id_list.index(int(session.user.id)) + 1
         else:
             index = "-1（未统计）"
 
         column_name = ["排名", "头像", "名称", "长度"]
-        friend_list = await FriendUser.filter(
-            user_id__in=user_id_list
-        ).values_list("user_id", "user_name")
-        uid2name = {f[0]: f[1] for f in friend_list}
         for i, (uid, length) in enumerate(user_length_map):
-            bytes = await PlatformUtils.get_user_avatar(uid, "qq", session.self_id)
+            bytes = await PlatformUtils.get_user_avatar(str(uid), "qq", session.self_id)
             data_list.append(
                 [
                     f"{i + 1}",
                     (bytes, 30, 30),
-                    uid2name.get(uid, "未知用户"),
+                    uid2name.get(uid)
+                    or (await bot.get_stranger_info(user_id=uid))["nickname"],
                     length,
                 ]
             )
-
-        if group_id:
-            title = "长度群组内排行"
+        title_1 = "深度" if deep else "长度"
+        if session.group:
+            title = f"{title_1}群组内排行"
             tip = f"你的排名在本群第 {index} 位哦!"
         else:
-            title = "长度全局排行"
+            title = f"{title_1}全局排行"
             tip = f"你的排名在全局第 {index} 位哦!"
 
         return await ImageTemplate.table_page(title, tip, column_name, data_list)
-
-
-# def pic2b64(pic: Image) -> str:
-#     """
-#     说明:
-#         PIL图片转base64
-#     参数:
-#         :param pic: 通过PIL打开的图片文件
-#     """
-#     buf = BytesIO()
-#     pic.save(buf, format="PNG")
-#     base64_str = base64.b64encode(buf.getvalue()).decode()
-#     return "base64://" + base64_str
-
-
-# def random_long():
-#     """
-#     注册随机牛牛长度
-#     """
-#     return de(str(f"{random.randint(1,9)}.{random.randint(00,99)}"))
-
-
-# def hit_glue(l):
-#     l -= de(1)
-#     return de(abs(de(random.random())*l/de(2))).quantize(de("0.00"))
 
 
 # def fence(rd):
@@ -324,36 +299,6 @@ class NiuNiu:
 #         return np.round(data, num_digits)
 #     else:
 #         return data
-
-
-# def ReadOrWrite(file, w=None):
-#     """
-#     读取或写入文件
-
-#     Args:
-#         file (string): 文件路径,相对于脚本
-#         w (any, optional): 写入内容,不传入则读. Defaults to None.
-
-#     Returns:
-#         any: 文件内容(仅读取)
-#     """
-#     file_path = Path(__file__).resolve().parent / file
-#     if w is not None:
-#         # 对要写入的内容进行四舍五入处理
-#         w_rounded = round_numbers(w)
-#         with file_path.open("w", encoding="utf-8") as f:
-#             f.write(ujson.dumps(w_rounded, indent=4, ensure_ascii=False))
-#         return True
-#     else:
-#         with file_path.open("r", encoding="utf-8") as f:
-#             return ujson.loads(f.read().strip())
-
-
-# def get_all_users(group):
-#     """
-#     获取全部用户及长度
-#     """
-#     return ReadOrWrite("data/long.json")[group]
 
 
 # def fencing(my_length, oppo_length, at_qq, my_qq, group, content={}):
@@ -483,83 +428,3 @@ class NiuNiu:
 #         else:
 #             result = f"对方以绝对的长度让你屈服了呢!你的长度减少{reduce}cm,当前长度{my}cm!"
 #     return result, my, oppo
-
-
-# def update_data(group, my_qq, my_length, at_qq, oppo_length, content):
-#     """
-#     更新数据。
-
-#     Args:
-#         group (str): 群号。
-#         my_qq (str): 我的 QQ 号。
-#         my_length (decimal): 我的当前长度。
-#         at_qq (str): 被 @ 的 QQ 号。
-#         oppo_length (decimal): 对手的当前长度。
-#         content (dict): 数据存储。
-#     """
-#     # 这里需要根据实际需求进行数据更新
-#     content[group][my_qq] = my_length
-#     content[group][at_qq] = oppo_length
-#     ReadOrWrite("data/long.json", content)
-#     return True
-
-
-# async def init_rank(
-#     title: str, all_user_id: List[int], all_user_data: List[float], group_id: int, total_count: int = 10
-# ) -> BuildMat:
-#     """
-#     说明:
-#         初始化通用的数据排行榜
-#     参数:
-#         :param title: 排行榜标题
-#         :param all_user_id: 所有用户的qq号
-#         :param all_user_data: 所有用户需要排行的对应数据
-#         :param group_id: 群号,用于从数据库中获取该用户在此群的昵称
-#         :param total_count: 获取人数总数
-#     """
-#     _uname_lst = []
-#     _num_lst = []
-#     for i in range(len(all_user_id) if len(all_user_id) < total_count else total_count):
-#         _max = max(all_user_data)
-#         max_user_id = all_user_id[all_user_data.index(_max)]
-#         all_user_id.remove(max_user_id)
-#         all_user_data.remove(_max)
-#         try:
-#           # 暂未找到nonebot方法获取群昵称
-#             user_name = max_user_id
-#         except AttributeError:
-#             user_name = f"{max_user_id}"
-#         _uname_lst.append(user_name)
-#         _num_lst.append(_max)
-#     _uname_lst.reverse()
-#     _num_lst.reverse()
-#     return await asyncio.get_event_loop().run_in_executor(
-#         None, _init_rank_graph, title, _uname_lst, _num_lst
-#     )
-
-
-# def _init_rank_graph(
-#     title: str, _uname_lst: List[str], _num_lst: List[Union[int, float]]
-# ) -> BuildMat:
-#     """
-#     生成排行榜统计图
-#     :param title: 排行榜标题
-#     :param _uname_lst: 用户名列表
-#     :param _num_lst: 数值列表
-#     """
-#     image = BuildMat(
-#         y=_num_lst,
-#         y_name="* 可以在命令后添加数字来指定排行人数 至多 50 *",
-#         mat_type="barh",
-#         title=title,
-#         x_index=_uname_lst,
-#         display_num=True,
-#         x_rotate=30,
-#         background=[
-#             f"{IMAGE_PATH}/background/create_mat/{x}"
-#             for x in os.listdir(f"{IMAGE_PATH}/background/create_mat")
-#         ],
-#         bar_color=["*"],
-#     )
-#     image.gen_graph()
-#     return image
