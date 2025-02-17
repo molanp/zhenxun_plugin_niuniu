@@ -1,9 +1,17 @@
-from pathlib import Path
-
-import nonebot
 from nonebot.plugin import PluginMetadata
 
 from zhenxun.configs.utils import PluginExtraData
+
+from .handler import (
+   niuniu_register,
+   niuniu_unsubscribe,
+   niuniu_my,
+   niuniu_length_rank,
+   niuniu_deep_rank,
+   niuniu_length_rank_all,
+   niuniu_deep_rank_all,
+   niuniu_hit_glue
+)
 
 __plugin_meta__ = PluginMetadata(
     name="牛牛大作战",
@@ -27,5 +35,3 @@ __plugin_meta__ = PluginMetadata(
         menu_type="群内小游戏",
     ).dict(),
 )
-
-nonebot.load_plugins(str(Path(__file__).parent.resolve()))

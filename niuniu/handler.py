@@ -259,7 +259,7 @@ async def _(session: Uninfo):
         }
     else:
         result = {
-            "avatar": f"data:image/png;base64,{base64.b64encode(await PlatformUtils.get_user_avatar(uid, 'qq', session.self_id)).decode('utf-8')}",
+            "avatar": f"data:image/png;base64,{base64.b64encode(await PlatformUtils.get_user_avatar(str(uid), 'qq', session.self_id)).decode('utf-8')}",
             "name": session.user.name,
             "rank": user["rank"],
             "my_length": user["length"],
