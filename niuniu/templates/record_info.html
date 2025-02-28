@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>牛牛战绩</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #fff;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin-right: 15px;
+            border: 3px solid #4CAF50;
+            box-shadow: 0 0 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .record-list {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .record-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            transition: transform 0.3s ease;
+        }
+
+        .record-item:hover {
+            transform: translateX(10px);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .icon {
+            font-size: 24px;
+            margin-right: 15px;
+            width: 40px;
+            text-align: center;
+        }
+
+        .content {
+            flex: 1;
+        }
+
+        .action {
+            font-size: 16px;
+            font-weight: 600;
+            color: #4CAF50;
+            margin-bottom: 5px;
+        }
+
+        .details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        .diff {
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .time {
+            color: #888;
+            font-size: 12px;
+        }
+
+        .stats {
+            text-align: right;
+            min-width: 120px;
+        }
+
+        .positive {
+            color: #4CAF50;
+        }
+
+        .negative {
+            color: #f44336;
+        }
+
+        .divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+            margin: 1px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img class="avatar" src="{{ avatar }}" alt="头像">
+            <div class="title">{{ name }}的牛牛战绩</div>
+        </div>
+        
+        <div class="record-list">
+            {% for record in records %}
+            <div class="record-item">
+                <div class="icon">{{ record.action_icon }}</div>
+                <div class="content">
+                    <div class="action">{{ record.action }}</div>
+                    <div class="details">
+                        <div>
+                            <span>{{ record.origin }}cm</span>
+                            → 
+                            <span>{{ record.new }}cm</span>
+                            <span class="diff {{ record.diff_color }}">{{ record.diff }}cm</span>
+                        </div>
+                        <div class="time">{{ record.time }}</div>
+                    </div>
+                </div>
+            </div>
+            {% if not loop.last %}<div class="divider"></div>{% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>

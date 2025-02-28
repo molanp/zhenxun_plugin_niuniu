@@ -1,5 +1,6 @@
 import random
 
+from nonebot import get_bot
 from nonebot_plugin_uninfo import Uninfo
 
 from zhenxun.utils.image_utils import BuildImage, ImageTemplate
@@ -10,12 +11,35 @@ from .database import Sqlite
 
 class NiuNiu:
     @classmethod
-    async def get_length(cls, uid: int) -> str | None:
-        data = Sqlite.query("users", columns=["length"], conditions={"uid": uid})
-        return data[0]["length"] if isinstance(data, list) else None
+    async def get_length(cls, uid: int | str) -> float | None:
+        data = await Sqlite.query("users", columns=["length"], conditions={"uid": uid})
+        return data[0]["length"] if data else None
 
     @classmethod
-    async def random_length(cls) -> str:
+    async def record_length(
+        cls, uid: int | str, origin_length: float, new_length: float, action: str
+    ):
+        await Sqlite.insert(
+            "records",
+            {
+                "uid": uid,
+                "origin_length": round(origin_length, 2),
+                "new_length": round(new_length, 2),
+                "diff": round(new_length - origin_length, 2),
+                "action": action,
+            },
+        )
+
+    @classmethod
+    async def update_length(cls, uid: int | str, new_length: float):
+        await Sqlite.update(
+            "users",
+            {"length": new_length, "sex": "boy" if new_length > 0 else "girl"},
+            {"uid": uid},
+        )
+
+    @classmethod
+    async def random_length(cls) -> float:
         sql = "SELECT length FROM users ORDER BY length"
         results = await Sqlite.exec(sql)
 
@@ -29,7 +53,7 @@ class NiuNiu:
                 origin_length = length_values[0]
             index = int(n * 0.3)
             origin_length = float(length_values[index])
-        return str(round(origin_length * 0.9, 2))
+        return round(origin_length * 0.9, 2)
 
     @classmethod
     async def latest_gluing_time(cls, uid: int) -> str:
@@ -165,7 +189,7 @@ class NiuNiu:
 
     @classmethod
     async def rank(
-        cls, bot, num: int, session: Uninfo, deep: bool = False, is_all: bool = False
+        cls, num: int, session: Uninfo, deep: bool = False, is_all: bool = False
     ) -> BuildImage | str:
         """牛牛排行
 
@@ -182,6 +206,7 @@ class NiuNiu:
         uid2name = {}
         data_list = []
         order = "length ASC" if deep else "length DESC"
+        bot = get_bot(self_id=session.self_id)
         if not is_all and session.group:
             user_ids = {
                 user["user_id"]: user["nickname"]
@@ -245,171 +270,19 @@ class NiuNiu:
 
         return await ImageTemplate.table_page(title, tip, column_name, data_list)
 
+    @classmethod
+    async def get_user_records(cls, uid: int | str, num: int = 10) -> list[dict]:
+        """
+        获取指定用户的战绩记录
 
-# def fence(rd):
-#     """
-
-#     根据比例减少/增加牛牛长度
-#     Args:
-#         rd (decimal): 精确计算decimal类型或float,int
-#     """
-#     rd -= de(time.localtime().tm_sec % 10)
-#     if rd > 1000000:
-#         return de(rd - de(random.uniform(0.13, 0.34))*rd)
-#     return de(abs(rd*de(random.random()))).quantize(de("0.00"))
-
-
-# def round_numbers(data, num_digits=2):
-#     """
-#     递归地四舍五入所有数字
-
-#     Args:
-#         data (any): 要处理的数据
-#         num_digits (int, optional): 四舍五入的小数位数. Defaults to 2.
-
-#     Returns:
-#         any: 处理后的数据
-#     """
-#     if isinstance(data, dict):
-#         with ThreadPoolExecutor() as executor:
-#             processed_values = list(executor.map(lambda v: round_numbers(v, num_digits), data.values()))
-#         return {k: processed_values[i] for i, k in enumerate(data.keys())}
-#     elif isinstance(data, list):
-#         with ThreadPoolExecutor() as executor:
-#             processed_items = list(executor.map(lambda item: round_numbers(item, num_digits), data))
-#         return processed_items
-#     elif isinstance(data, (int, float)):
-#         return round(data, num_digits)
-#     elif isinstance(data, np.ndarray):
-#         return np.round(data, num_digits)
-#     else:
-#         return data
-
-
-# def fencing(my_length, oppo_length, at_qq, my_qq, group, content={}):
-#     """
-#     确定击剑比赛的结果。
-
-#     Args:
-#         my_length (decimal): 我的当前长度,decimal 类型以确保精度。
-#         oppo_length (decimal): 对手的当前长度,decimal 类型以确保精度。
-#         at_qq (str): 被 @ 的人的 QQ 号码。
-#         my_qq (str): 我的 QQ 号码。
-#         group (str): 当前群号码。
-#         content (dict): 用于存储长度的数据。
-#     """
-#     # 定义损失和吞噬比例
-#     loss_limit = de(0.25)
-#     devour_limit = de(0.27)
-
-#     # 生成一个随机数
-#     probability = random.randint(1, 100)
-
-#     # 根据不同情况执行不同的击剑逻辑
-#     if oppo_length <= -100 and my_length > 0 and 10 < probability <= 20:
-#         oppo_length *= de(0.85)
-#         my_length -= min(abs(loss_limit * my_length), abs(de(1.5)*my_length))
-#         result = f"对方身为魅魔诱惑了你,你同化成魅魔!当前长度{my_length}cm!"
-
-#     elif oppo_length >= 100 and my_length > 0 and 10 < probability <= 20:
-#         oppo_length *= de(0.85)
-#         my_length -= min(abs(devour_limit * my_length), abs(de(1.5)*my_length))
-#         result = f"对方以牛头人的荣誉摧毁了你的牛牛!当前长度{my_length}cm!"
-
-#     elif my_length <= -100 and oppo_length > 0 and 10 < probability <= 20:
-#         my_length *= de(0.85)
-#         oppo_length -= min(abs(loss_limit * oppo_length),
-#                            abs(de(1.5)*oppo_length))
-#         result = f"你身为魅魔诱惑了对方,吞噬了对方部分长度!当前长度{my_length}cm!"
-
-#     elif my_length >= 100 and oppo_length > 0 and 10 < probability <= 20:
-#         my_length *= de(0.85)
-#         oppo_length -= min(abs(devour_limit * oppo_length),
-#                            abs(de(1.5)*oppo_length))
-#         result = f"你以牛头人的荣誉摧毁了对方的牛牛!当前长度{my_length}cm!"
-
-#     else:
-#         # 通过击剑技巧来决定结果
-#         result, my_length, oppo_length = determine_result_by_skill(
-#             my_length, oppo_length)
-
-#     # 更新数据并返回结果
-#     update_data(group, my_qq, oppo_length, at_qq, my_length, content)
-#     return result
-
-
-# def calculate_win_probability(height_a, height_b):
-#     # 选手 A 的初始胜率为 90%
-#     p_a = de(0.9)
-#     # 计算长度比例
-#     height_ratio = max(height_a, height_b) / min(height_a, height_b)
-
-#     # 根据长度比例计算胜率减少率
-#     reduction_rate = de(0.1) * (height_ratio - 1)
-
-#     # 计算 A 的胜率减少量
-#     reduction = p_a * reduction_rate
-
-#     # 调整 A 的胜率
-#     adjusted_p_a = p_a - reduction
-
-#     # 返回调整后的胜率
-#     return max(adjusted_p_a, de(0.01))
-
-
-# def determine_result_by_skill(my_length, oppo_length):
-#     """
-#     根据击剑技巧决定结果。
-
-#     Args:
-#         my_length (decimal): 我的当前长度。
-#         oppo_length (decimal): 对手的当前长度。
-
-#     Returns:
-#         str: 包含结果的字符串。
-#     """
-#     # 生成一个随机数
-#     probability = random.randint(0, 100)
-
-#     # 根据不同情况决定结果
-#     if 0 < probability <= calculate_win_probability(my_length, oppo_length)*100:
-#         return apply_skill(my_length, oppo_length, True)
-#     else:
-#         return apply_skill(my_length, oppo_length, False)
-
-
-# def apply_skill(my, oppo, increase_length1):
-#     """
-#     应用击剑技巧并生成结果字符串。
-
-#     Args:
-#         my (decimal): 长度1。
-#         oppo (decimal): 长度2。
-#         increase_length1 (bool): my是否增加长度。
-
-#     Returns:
-#         str: 包含结果的数组。
-#     """
-#     reduce = fence(oppo)
-#     if increase_length1:
-#         my += reduce
-#         oppo -= de(0.8)*reduce
-#         if my < 0:
-#             result = random.choice([
-#                 f"哦吼!？你的牛牛在长大欸!长大了{reduce}cm!",
-#                 f"牛牛凹进去的深度变浅了欸!变浅了{reduce}cm!"
-#             ])
-#         else:
-#             result = f"你以绝对的长度让对方屈服了呢!你的长度增加{reduce}cm,当前长度{my}cm!"
-#     else:
-#         my -= reduce
-#         oppo += de(0.8)*reduce
-#         if my < 0:
-#             result = random.choice([
-#                 f"哦吼!？看来你的牛牛因为击剑而凹进去了呢🤣🤣🤣!凹进去了{reduce}cm!",
-#                 f"由于对方击剑技术过于高超,造成你的牛牛凹了进去呢😰!凹进去了{reduce}cm!",
-#                 f"好惨啊,本来就不长的牛牛现在凹进去了呢😂!凹进去了{reduce}cm!"
-#             ])
-#         else:
-#             result = f"对方以绝对的长度让你屈服了呢!你的长度减少{reduce}cm,当前长度{my}cm!"
-#     return result, my, oppo
+        :param uid: 用户ID
+        :param num: 记录数量
+        :return: 记录列表
+        """
+        return await Sqlite.query(
+            table="records",
+            columns=["action", "origin_length", "new_length", "diff", "time"],
+            conditions={"uid": uid},
+            order_by="time DESC",
+            limit=num,
+        )

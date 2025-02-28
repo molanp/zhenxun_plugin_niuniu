@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Info</title>
+    <title>NiuNiu Info</title>
     <style>
       .card {
         border: 1px solid #ddd;
@@ -48,6 +48,7 @@
         <img src="{{ avatar }}" alt="{{ name }}" />
         <span class="title">{{ name }}の牛牛信息</span>
       </div>
+      <p><span>排名:</span><b> #{{ rank }}</b></p>
       <p>
         <span>性别:</span>
         <span class="{{ 'male' if my_length > 0 else 'female' }}">

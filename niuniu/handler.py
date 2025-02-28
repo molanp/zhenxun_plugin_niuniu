@@ -3,30 +3,30 @@ import contextlib
 from pathlib import Path
 import random
 import time
-from typing import Any
 
 import aiofiles
-from arclet.alconna import AllParam, Args, CommandMeta
-from nonebot import get_driver
+from arclet.alconna import Args
+from nonebot import get_driver, on_command
 from nonebot_plugin_alconna import (
     Alconna,
     At,
     Image,
     Match,
     Text,
-    UniMessage,
+    UniMsg,
     on_alconna,
 )
 from nonebot_plugin_htmlrender import template_to_pic
 from nonebot_plugin_uninfo import Uninfo
 
 from zhenxun.models.user_console import UserConsole
+from zhenxun.plugins.niuniu.fence import Fencing
 from zhenxun.utils.enum import GoldHandle
 from zhenxun.utils.message import MessageUtils
 from zhenxun.utils.platform import PlatformUtils
 
-from .data_source import NiuNiu
 from .database import Sqlite
+from .niuniu import NiuNiu
 
 niuniu_register = on_alconna(
     Alconna("注册牛牛"),
@@ -38,12 +38,12 @@ niuniu_unsubscribe = on_alconna(
     priority=5,
     block=True,
 )
-# niuniu_fencing = on_alconna(
-#     Alconna("击剑", Args["at?", AllParam], meta=CommandMeta(compact=True)),
-#     aliases=("JJ", "Jj", "jJ", "jj"),
-#     priority=5,
-#     block=True,
-# )
+niuniu_fencing = on_command(
+    "击剑",
+    aliases={"JJ", "Jj", "jJ", "jj"},
+    priority=5,
+    block=True,
+)
 niuniu_my = on_alconna(
     Alconna("我的牛牛"),
     priority=5,
@@ -71,6 +71,12 @@ niuniu_deep_rank_all = on_alconna(
 )
 niuniu_hit_glue = on_alconna(
     Alconna("打胶"),
+    priority=5,
+    block=True,
+)
+
+niuniu_my_record = on_alconna(
+    Alconna("我的牛牛战绩", Args["num?", int, 10]),
     priority=5,
     block=True,
 )
@@ -121,7 +127,7 @@ async def _(session: Uninfo):
 @niuniu_unsubscribe.handle()
 async def _(session: Uninfo):
     uid = str(session.user.id)
-    length = await Sqlite.query("users", ["length"], {"uid": uid})
+    length = await NiuNiu.get_length(uid)
     if not length:
         await niuniu_unsubscribe.send(Text("你还没有牛牛呢！"), reply_to=True)
         return
@@ -133,82 +139,57 @@ async def _(session: Uninfo):
     else:
         await UserConsole.reduce_gold(uid, 50, GoldHandle.PLUGIN, "niuniu")
         await Sqlite.delete("users", {"uid": uid})
-        await Sqlite.insert(
-            "records",
-            {
-                "uid": uid,
-                "origin_length": round(length[0]["length"]),
-                "diff": -round(length[0]["length"]),
-                "new_length": 0,
-                "action": "unsubscribe",
-            },
-        )
+        await NiuNiu.record_length(uid, length, 0, "unsubscribe")
         await niuniu_unsubscribe.finish(Text("从今往后你就没有牛牛啦！"), reply_to=True)
 
 
-# @niuniu_fencing.handle()
-# async def _(session: Uninfo, match: Match[Any]):
-#     global user_fence_time_map
-#     uid = session.user.id
-#     with contextlib.suppress(KeyError):
-#         time_pass = int(time.time() - user_fence_time_map[uid])
-#         if time_pass < 180:
-#             time_rest = 180 - time_pass
-#             jj_refuse = [
-#                 f"才过去了{time_pass}s时间,你就又要击剑了，真是饥渴难耐啊",
-#                 f"不行不行，你的身体会受不了的，歇{time_rest}s再来吧",
-#                 f"你这种男同就应该被送去集中营！等待{time_rest}s再来吧",
-#                 f"打咩哟！你的牛牛会炸的，休息{time_rest}s再来吧",
-#             ]
-#             await niuniu_fencing.send(random.choice(jj_refuse), reply_to=True)
-#             return
-#     if not match.available:
-#         await niuniu_fencing.send("你要和谁击剑？你自己吗？", reply_to=True)
-#     else:
-#         messages = UniMessage(match.result)
-#         at_list = [
-#             message.data["qq"]
-#             for message in messages
-#             if isinstance(message, At)
-#         ]
-#         await niuniu_fencing.send(Text(str(at_list)))
-
-#     return
-        #
-        # msg = event.get_message()
-        # content = ReadOrWrite("data/long.json")
-        # at_list = []
-        # for msg_seg in msg:
-        #     if msg_seg.type == "at":
-        #         at_list.append(msg_seg.data["qq"])
-        # try:
-        #     my_long = de(str(content[group][qq]))
-        #     if len(at_list) >= 1:
-        #         at = str(at_list[0])
-        #         if len(at_list) >= 2:
-        #             result = random.choice(
-        #                 ["一战多？你的小身板扛得住吗？", "你不准参加Impart┗|｀O′|┛"]
-        #             )
-        #         elif at != qq:
-        #             try:
-        #                 opponent_long = de(str(content[group][at]))
-        #                 group_user_jj[group][qq]["time"] = time.time()
-        #                 result = fencing(my_long, opponent_long, at, qq, group, content)
-        #             except KeyError:
-        #                 result = "对方还没有牛牛呢，你不能和ta击剑！"
-        #         else:
-        #             result = "不能和自己击剑哦！"
-        # except KeyError:
-        #     pass
-        #     result = "你还没有牛牛呢！不能击剑！"
-        # finally:
-        #     await niuniu_fencing.finish(Message(result), at_sender=True)
+@niuniu_fencing.handle()
+async def _(session: Uninfo, msg: UniMsg):
+    global user_fence_time_map
+    at_list = [i.target for i in msg if isinstance(i, At)]
+    uid = session.user.id
+    with contextlib.suppress(KeyError):
+        time_pass = int(time.time() - user_fence_time_map[uid])
+        if time_pass < 180:
+            time_rest = 180 - time_pass
+            jj_refuse = [
+                f"才过去了{time_pass}s时间,你就又要击剑了，真是饥渴难耐啊",
+                f"不行不行，你的身体会受不了的，歇{time_rest}s再来吧",
+                f"你这种男同就应该被送去集中营！等待{time_rest}s再来吧",
+                f"打咩哟！你的牛牛会炸的，休息{time_rest}s再来吧",
+            ]
+            await niuniu_fencing.send(random.choice(jj_refuse), reply_message=True)
+            return
+    if not at_list:
+        await niuniu_fencing.send("你要和谁击剑？你自己吗？", reply_message=True)
+        return
+    my_long = await NiuNiu.get_length(uid)
+    try:
+        if not my_long:
+            raise RuntimeError("你还没有牛牛呢！不能击剑！")
+        at = str(at_list[0])
+        if len(at_list) >= 2:
+            raise RuntimeError(
+                random.choice(
+                    ["一战多？你的小身板扛得住吗？", "你不准参加Impart┗|｀O′|┛"]
+                )
+            )
+        if at == uid:
+            raise RuntimeError("不能和自己击剑哦！")
+        opponent_long = await NiuNiu.get_length(at)
+        if not opponent_long:
+            raise RuntimeError("对方还没有牛牛呢！不能击剑！")
+        user_fence_time_map[uid] = time.time()
+        result = await Fencing.fencing(my_long, opponent_long, at, uid)
+        await niuniu_fencing.send(result, reply_message=True)
+    except RuntimeError as e:
+        await niuniu_fencing.send(str(e), reply_message=True)
 
 
 @niuniu_my.handle()
 async def _(session: Uninfo):
     uid = int(session.user.id)
-    if not await Sqlite.query("users", ["length"], {"uid": uid}):
+    if not await NiuNiu.get_length(uid):
         await niuniu_my.send(Text("你还没有牛牛呢！"), reply_to=True)
         return
 
@@ -243,13 +224,15 @@ async def _(session: Uninfo):
         await niuniu_my.send(Text("未查询到数据..."), reply_to=True)
         return
     user = results[0]
+    avatar = await PlatformUtils.get_user_avatar(str(uid), "qq", session.self_id)
+    avatar = "" if avatar is None else base64.b64encode(avatar).decode("utf-8")
     if user.get("next_uid"):
         rank = user["rank"]
         next_uid = user["next_uid"]  # noqa: F841
         next_length = user["next_length"]
         next_rank = user["next_rank"]  # noqa: F841
         result = {
-            "avatar": f"data:image/png;base64,{base64.b64encode(await PlatformUtils.get_user_avatar(uid, 'qq', session.self_id)).decode('utf-8')}",
+            "avatar": f"data:image/png;base64,{avatar}",
             "name": session.user.name,
             "rank": rank,
             "my_length": user["length"],
@@ -259,7 +242,7 @@ async def _(session: Uninfo):
         }
     else:
         result = {
-            "avatar": f"data:image/png;base64,{base64.b64encode(await PlatformUtils.get_user_avatar(str(uid), 'qq', session.self_id)).decode('utf-8')}",
+            "avatar": f"data:image/png;base64,{avatar}",
             "name": session.user.name,
             "rank": user["rank"],
             "my_length": user["length"],
@@ -277,7 +260,7 @@ async def _(session: Uninfo):
 
 
 @niuniu_length_rank.handle()
-async def _(bot, session: Uninfo, match: Match[int]):
+async def _(session: Uninfo, match: Match[int]):
     if not match.available:
         match.result = 10
     if match.result > 50:
@@ -287,22 +270,22 @@ async def _(bot, session: Uninfo, match: Match[int]):
         await MessageUtils.build_message(
             "私聊中无法查看 '牛牛长度排行'，请发送 '牛牛长度总排行'"
         ).finish()
-    image = await NiuNiu.rank(bot, match.result, session)
+    image = await NiuNiu.rank(match.result, session)
     await MessageUtils.build_message(image).send()
 
 
 @niuniu_length_rank_all.handle()
-async def _(bot, session: Uninfo, match: Match[int]):
+async def _(session: Uninfo, match: Match[int]):
     if not match.available:
         match.result = 10
     if match.result > 50:
         await MessageUtils.build_message("排行榜人数不能超过50哦...").finish()
-    image = await NiuNiu.rank(bot, match.result, session, is_all=True)
+    image = await NiuNiu.rank(match.result, session, is_all=True)
     await MessageUtils.build_message(image).send()
 
 
 @niuniu_deep_rank.handle()
-async def _(bot, session: Uninfo, match: Match[int]):
+async def _(session: Uninfo, match: Match[int]):
     if not match.available:
         match.result = 10
     if match.result > 50:
@@ -312,32 +295,32 @@ async def _(bot, session: Uninfo, match: Match[int]):
         await MessageUtils.build_message(
             "私聊中无法查看 '牛牛深度排行'，请发送 '牛牛深度总排行'"
         ).finish()
-    image = await NiuNiu.rank(bot, match.result, session, True)
+    image = await NiuNiu.rank(match.result, session, True)
     await MessageUtils.build_message(image).send()
 
 
 @niuniu_deep_rank_all.handle()
-async def _(bot, session: Uninfo, match: Match[int]):
+async def _(session: Uninfo, match: Match[int]):
     if not match.available:
         match.result = 10
     if match.result > 50:
         await MessageUtils.build_message("排行榜人数不能超过50哦...").finish()
-    image = await NiuNiu.rank(bot, match.result, session, is_all=True)
+    image = await NiuNiu.rank(match.result, session, is_all=True)
     await MessageUtils.build_message(image).send()
 
 
 @niuniu_hit_glue.handle()
-async def _(session: Uninfo):
+async def hit_glue(session: Uninfo):
     global user_gluing_time_map
     uid = session.user.id
-    origin_length = await Sqlite.query("users", ["length"], {"uid": uid})
+    origin_length = await NiuNiu.get_length(uid)
     if not origin_length:
         await niuniu_hit_glue.send(
             Text(random.choice(["你还没有牛牛呢！不能打胶！", "无牛牛，打胶不要的"])),
             reply_to=True,
         )
         return
-    new_length = origin_length = origin_length[0]["length"]
+    new_length = origin_length
     with contextlib.suppress(KeyError):
         time_pass = int(time.time() - user_gluing_time_map[uid])
         if time_pass < 180:
@@ -398,20 +381,61 @@ async def _(session: Uninfo):
                 ]
             )
 
-    await Sqlite.update(
-        "users",
-        {"length": new_length, "sex": "boy" if new_length > 0 else "girl"},
-        {"uid": uid},
-    )
-    await Sqlite.insert(
-        "records",
-        {
-            "uid": uid,
-            "origin_length": origin_length,
-            "diff": diff,
-            "new_length": new_length,
-            "action": "gluing",
-        },
-    )
+    await NiuNiu.update_length(uid, new_length)
+    await NiuNiu.record_length(uid, origin_length, new_length, "gluing")
 
     await niuniu_hit_glue.send(Text(result), reply_to=True)
+
+
+@niuniu_my_record.handle()
+async def my_record(session: Uninfo, match: Match[int]):
+    uid = session.user.id
+    num = match.result if match.available else 10
+    records = await NiuNiu.get_user_records(uid, num)
+
+    if not records:
+        await niuniu_my_record.send(Text("你还没有任何牛牛战绩哦~"), reply_to=True)
+        return
+
+    # 获取用户头像
+    avatar_bytes = await PlatformUtils.get_user_avatar(str(uid), "qq", session.self_id)
+    avatar = base64.b64encode(avatar_bytes).decode("utf-8") if avatar_bytes else ""
+
+    # 构建模板数据
+    result = {
+        "avatar": f"data:image/png;base64,{avatar}",
+        "name": session.user.name,
+        "records": [
+            {
+                "action_icon": {
+                    "fencing": "🎮",
+                    "fenced": "🎯",
+                    "register": "📝",
+                    "gluing": "💦",
+                    "unsubscribe": "❌",
+                }.get(record["action"], record["action"]),
+                "action": {
+                    "fencing": "击剑",
+                    "fenced": "被击剑",
+                    "gluing": "打胶",
+                    "register": "注册牛牛",
+                    "unsubscribe": "注销牛牛",
+                }.get(record["action"], record["action"]),
+                "time": record["time"],
+                "origin": record["origin_length"],
+                "new": record["new_length"],
+                "diff": f"+{record['diff']}" if record["diff"] > 0 else record["diff"],
+                "diff_color": "green" if record["diff"] > 0 else "red",
+            }
+            for record in records
+        ],
+    }
+
+    # 渲染模板
+    template_dir = Path(__file__).resolve().parent / "templates"
+    pic = await template_to_pic(
+        template_path=str(template_dir),
+        template_name="record_info.html",
+        templates=result,
+    )
+    await niuniu_my_record.send(Image(raw=pic), reply_to=True)

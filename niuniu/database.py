@@ -4,14 +4,24 @@ from pathlib import Path
 
 import aiosqlite
 
+from zhenxun.configs.path_config import DATA_PATH
+from zhenxun.services.log import logger
+
 
 class Sqlite:
+    DATABASE_PATH = DATA_PATH / "niuniu" / "data.db"
+
     @classmethod
     async def init(cls) -> None:
-        os.makedirs(Path(__file__).resolve().parent / "data", exist_ok=True)
-        cls.conn = await aiosqlite.connect(
-            Path(__file__).resolve().parent / "data" / "data.db"
-        )
+        os.makedirs(DATA_PATH / "niuniu", exist_ok=True)
+        old_db_path = Path(__file__).resolve().parent / "data" / "data.db"
+
+        if old_db_path.exists():
+            os.replace(old_db_path, cls.DATABASE_PATH)
+            os.remove(Path(__file__).resolve().parent / "data")
+            logger.info("迁移数据库成功", "niuniu")
+
+        cls.conn = await aiosqlite.connect(cls.DATABASE_PATH)
         await cls.exec("""
                 CREATE TABLE IF NOT EXISTS users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,9 +67,7 @@ class Sqlite:
 
     @classmethod
     async def json2db(cls, file_data) -> None:
-        async with cls.conn.cursor() as cursor:
-            await cursor.execute("DELETE FROM users")
-            await cls.conn.commit()
+        await cls.exec("DELETE FROM users")
         mixed_data = []
         for groups in file_data:
             mixed_data.extend(
