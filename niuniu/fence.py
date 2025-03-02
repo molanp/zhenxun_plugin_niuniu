@@ -47,7 +47,7 @@ class Fencing:
                 abs(devour_limit * my_length), abs(1.5 * my_length)
             )
             my_length -= min(abs(devour_limit * my_length), abs(1.5 * my_length))
-            result = f"对方以牛头人的荣誉摧毁了你的牛牛!当前长度{my_length}cm!"
+            result = f"对方以牛头人的荣誉摧毁了你的牛牛!当前长度{round(my_length, 2)}cm!"
         elif my_length <= -100 and oppo_length > 0 and 10 < probability <= 20:
             my_length *= 0.65 + min(
                 abs(loss_limit * oppo_length), abs(1.5 * oppo_length)
@@ -59,7 +59,7 @@ class Fencing:
                 abs(devour_limit * oppo_length), abs(1.5 * oppo_length)
             )
             oppo_length -= min(abs(devour_limit * oppo_length), abs(1.5 * oppo_length))
-            result = f"你以牛头人的荣誉摧毁了对方的牛牛!当前长度{my_length}cm!"
+            result = f"你以牛头人的荣誉摧毁了对方的牛牛!当前长度{round(my_length, 2)}cm!"
         else:
             # 通过击剑技巧来决定结果
             result, my_length, oppo_length = await cls.determine_result_by_skill(
@@ -148,7 +148,7 @@ class Fencing:
                     ]
                 )
             else:
-                result = f"你以绝对的长度让对方屈服了呢!你的长度增加{reduce}cm,当前长度{my}cm!"  # noqa: E501
+                result = f"你以绝对的长度让对方屈服了呢!你的长度增加{reduce}cm,当前长度{round(my, 2)}cm!"  # noqa: E501
         else:
             my -= reduce
             oppo += 0.8 * reduce
@@ -161,7 +161,7 @@ class Fencing:
                     ]
                 )
             else:
-                result = f"对方以绝对的长度让你屈服了呢!你的长度减少{reduce}cm,当前长度{my}cm!"  # noqa: E501
+                result = f"对方以绝对的长度让你屈服了呢!你的长度减少{reduce}cm,当前长度{round(my, 2)}cm!"  # noqa: E501
         return result, my, oppo
 
     @classmethod
