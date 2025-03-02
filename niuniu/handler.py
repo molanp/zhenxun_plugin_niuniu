@@ -132,12 +132,12 @@ async def _(session: Uninfo):
         await niuniu_unsubscribe.send(Text("你还没有牛牛呢！"), reply_to=True)
         return
     gold = (await UserConsole.get_user(uid)).gold
-    if gold < 50:
+    if gold < 500:
         await niuniu_unsubscribe.send(
             Text("你的金币不足，无法注销牛牛！"), reply_to=True
         )
     else:
-        await UserConsole.reduce_gold(uid, 50, GoldHandle.PLUGIN, "niuniu")
+        await UserConsole.reduce_gold(uid, 500, GoldHandle.PLUGIN, "niuniu")
         await Sqlite.delete("users", {"uid": uid})
         await NiuNiu.record_length(uid, length, 0, "unsubscribe")
         await niuniu_unsubscribe.finish(Text("从今往后你就没有牛牛啦！"), reply_to=True)
