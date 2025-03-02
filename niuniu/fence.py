@@ -148,7 +148,7 @@ class Fencing:
                     ]
                 )
             else:
-                result = f"你以绝对的长度让对方屈服了呢!你的长度增加{reduce}cm,当前长度{round(my, 2)}cm!"  # noqa: E501
+                result = f"你以绝对的长度让对方屈服了呢!你的长度增加{reduce}cm,对方减少了{0.8*reduce}cm!你当前长度为{round(my, 2)}cm!"  # noqa: E501
         else:
             my -= reduce
             oppo += 0.8 * reduce

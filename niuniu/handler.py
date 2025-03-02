@@ -129,7 +129,7 @@ async def _(session: Uninfo):
     uid = str(session.user.id)
     length = await NiuNiu.get_length(uid)
     if not length:
-        await niuniu_unsubscribe.send(Text("你还没有牛牛呢！"), reply_to=True)
+        await niuniu_unsubscribe.send(Text("你还没有牛牛呢！\n请发送'注册牛牛'领取你的牛牛!"), reply_to=True)
         return
     gold = (await UserConsole.get_user(uid)).gold
     if gold < 500:
@@ -166,7 +166,7 @@ async def _(session: Uninfo, msg: UniMsg):
     my_long = await NiuNiu.get_length(uid)
     try:
         if not my_long:
-            raise RuntimeError("你还没有牛牛呢！不能击剑！")
+            raise RuntimeError("你还没有牛牛呢！不能击剑！\n请发送'注册牛牛'领取你的牛牛!")
         at = str(at_list[0])
         if len(at_list) >= 2:
             raise RuntimeError(
@@ -190,7 +190,7 @@ async def _(session: Uninfo, msg: UniMsg):
 async def _(session: Uninfo):
     uid = int(session.user.id)
     if not await NiuNiu.get_length(uid):
-        await niuniu_my.send(Text("你还没有牛牛呢！"), reply_to=True)
+        await niuniu_my.send(Text("你还没有牛牛呢！\n请发送'注册牛牛'领取你的牛牛!"), reply_to=True)
         return
 
     sql = """
