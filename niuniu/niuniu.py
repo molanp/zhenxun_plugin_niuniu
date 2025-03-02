@@ -218,7 +218,6 @@ class NiuNiu:
                     table="users",
                     columns=["uid", "length"],
                     order_by=order,
-                    limit=num,
                 )
                 for user in user_data:
                     uid = user["uid"]
@@ -227,18 +226,19 @@ class NiuNiu:
                         (deep and length <= 0) or (not deep and length >= 0)
                     ):
                         user_length_map.append([uid, length])
+                        if len(user_length_map) == num:
+                            break
         else:
             user_data = await Sqlite.query(
                 table="users",
                 columns=["uid", "length"],
                 order_by=order,
-                limit=num,
             )
-            user_length_map.extend(
-                [user["uid"], user["length"]]
-                for user in user_data
-                if (deep and user["length"] <= 0) or (not deep and user["length"] > 0)
-            )
+            for user in user_data:
+                if (deep and user["length"] <= 0) or (not deep and user["length"] > 0):
+                    user_length_map.append([user["uid"], user["length"]])
+                    if len(user_length_map) == num:
+                        break
         if not user_length_map:
             return "当前还没有人有牛牛哦..."
         user_id_list = [sublist[0] for sublist in user_length_map]
