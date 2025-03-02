@@ -35,7 +35,7 @@ __plugin_meta__ = PluginMetadata(
     """.strip(),
     extra=PluginExtraData(
         author="molanp",
-        version="0.8",
+        version="0.8-fix",
         menu_type="群内小游戏",
     ).dict(),
 )

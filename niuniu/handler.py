@@ -305,7 +305,7 @@ async def _(session: Uninfo, match: Match[int]):
         match.result = 10
     if match.result > 50:
         await MessageUtils.build_message("排行榜人数不能超过50哦...").finish()
-    image = await NiuNiu.rank(match.result, session, is_all=True)
+    image = await NiuNiu.rank(match.result, session, True, is_all=True)
     await MessageUtils.build_message(image).send()
 
 
