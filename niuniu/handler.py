@@ -316,7 +316,7 @@ async def hit_glue(session: Uninfo):
     origin_length = await NiuNiu.get_length(uid)
     if not origin_length:
         await niuniu_hit_glue.send(
-            Text(random.choice(["你还没有牛牛呢！不能打胶！", "无牛牛，打胶不要的"])),
+            Text(random.choice(["你还没有牛牛呢！不能打胶！\n请发送'注册牛牛'", "无牛牛，打胶不要的!\n请发送'注册牛牛'"])),
             reply_to=True,
         )
         return
