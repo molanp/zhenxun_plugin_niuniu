@@ -41,7 +41,7 @@ class Fencing:
         if oppo_length <= -100 and my_length > 0 and 10 < probability <= 20:
             oppo_length *= 0.65 + min(abs(loss_limit * my_length), abs(1.5 * my_length))
             my_length -= min(abs(loss_limit * my_length), abs(1.5 * my_length))
-            result = f"对方身为魅魔诱惑了你,你同化成魅魔!当前长度{my_length}cm!"
+            result = f"对方身为魅魔诱惑了你,你同化成魅魔!当前长度{round(my_length,2)}cm!"
         elif oppo_length >= 100 and my_length > 0 and 10 < probability <= 20:
             oppo_length *= 0.65 + min(
                 abs(devour_limit * my_length), abs(1.5 * my_length)
@@ -53,7 +53,7 @@ class Fencing:
                 abs(loss_limit * oppo_length), abs(1.5 * oppo_length)
             )
             oppo_length -= min(abs(loss_limit * oppo_length), abs(1.5 * oppo_length))
-            result = f"你身为魅魔诱惑了对方,吞噬了对方部分长度!当前长度{my_length}cm!"
+            result = f"你身为魅魔诱惑了对方,吞噬了对方部分长度!当前长度{round(my_length, 2)}cm!"
         elif my_length >= 100 and oppo_length > 0 and 10 < probability <= 20:
             my_length *= 0.65 + min(
                 abs(devour_limit * oppo_length), abs(1.5 * oppo_length)
@@ -148,7 +148,7 @@ class Fencing:
                     ]
                 )
             else:
-                result = f"你以绝对的长度让对方屈服了呢!你的长度增加{reduce}cm,对方减少了{0.8*reduce}cm!你当前长度为{round(my, 2)}cm!"  # noqa: E501
+                result = f"你以绝对的长度让对方屈服了呢!你的长度增加{reduce}cm,对方减少了{round(0.8*reduce, 2)}cm!你当前长度为{round(my, 2)}cm!"  # noqa: E501
         else:
             my -= reduce
             oppo += 0.8 * reduce
