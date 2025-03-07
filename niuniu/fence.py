@@ -41,6 +41,7 @@ class Fencing:
         if oppo_length <= -100 and my_length > 0 and 10 < probability <= 20:
             oppo_length *= 0.65 + min(abs(loss_limit * my_length), abs(1.5 * my_length))
             my_length -= min(abs(loss_limit * my_length), abs(1.5 * my_length))
+            my_length = my_length * -1
             result = f"对方身为魅魔诱惑了你,你同化成魅魔!当前长度{round(my_length,2)}cm!"
         elif oppo_length >= 100 and my_length > 0 and 10 < probability <= 20:
             oppo_length *= 0.65 + min(
