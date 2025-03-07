@@ -1,3 +1,4 @@
+from datetime import datetime
 import random
 
 from nonebot import get_bot
@@ -37,6 +38,25 @@ class NiuNiu:
             {"length": new_length, "sex": "boy" if new_length > 0 else "girl"},
             {"uid": uid},
         )
+
+    @classmethod
+    async def apply_decay(cls, current_length: float) -> float:
+        """动态衰减核心算法"""
+        decay_rate = 0.02  # 基础衰减率
+
+        # 动态调整规则
+        if current_length > 50:
+            decay_rate += min(
+                0.1, (current_length - 50) * 0.005
+            )  # 超50部分每cm+0.5%衰减
+        elif current_length < -50:
+            decay_rate -= max(-0.1, (current_length + 50) * 0.005)  # 负值反向衰减
+
+        # 保证衰减方向正确
+        if current_length > 0:
+            return max(0, current_length * (1 - decay_rate))  # 正向衰减不下穿0
+        else:
+            return min(0, current_length * (1 + decay_rate))  # 负向衰减不上穿0
 
     @classmethod
     async def random_length(cls) -> float:
@@ -97,19 +117,39 @@ class NiuNiu:
         return [greater_length, less_length]
 
     @classmethod
+    async def last_fenced_time(cls, uid: int | str) -> float:
+        """获取最后一次被击剑时间"""
+        data = await Sqlite.query(
+            "records",
+            columns=["time"],
+            conditions={"uid": uid, "action": "fenced"},
+            order_by="time DESC",
+            limit=1,
+        )
+        return (
+            datetime.strptime(data[0]["time"], "%Y-%m-%d %H:%M:%S").timestamp()
+            if data
+            else 0
+        )
+
+    @classmethod
     async def gluing(cls, origin_length: float) -> tuple[float, float]:
         result = await cls.get_nearest_lengths(origin_length)
         if result[0] != 0 or result[1] != 0:
-            new_length = origin_length + result[0] * 0.3 - result[1] * 0.6
+            growth_factor = max(0.5, 1 - abs(origin_length) / 200)  # 长度越大增长越慢
+            new_length = (
+                origin_length + (result[0] * 0.3 - result[1] * 0.6) * growth_factor
+            )
             return round(new_length, 2), round(new_length - origin_length, 2)
 
         if origin_length <= 0:
-            prob = random.choice([-1.1, -1, -1, -1, -1, 1, 1, 1, 1])
+            prob = random.choice([-0.8, -0.6, -0.6, -0.4, -0.4, 0.4, 0.4, 0.6, 0.6])
             diff = prob * 0.1 * origin_length + 1
         else:
-            prob = random.choice([1, 1, 1, 1, 1, 0.9, -1, -1, -1, -1, -1, -1.4])
+            prob = random.choice([0.8, 0.6, 0.4, 0.2, 0, -0.2, -0.4, -0.6, -0.8, -1.0])
             diff = prob * 0.1 * origin_length - 1
-        new_length = origin_length + diff
+        raw_new_length = origin_length + diff
+        new_length = await cls.apply_decay(raw_new_length)
         return round(new_length, 2), round(new_length - origin_length, 2)
 
     @classmethod

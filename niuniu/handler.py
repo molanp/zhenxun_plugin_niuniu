@@ -27,6 +27,7 @@ from zhenxun.utils.platform import PlatformUtils
 
 from .database import Sqlite
 from .niuniu import NiuNiu
+from .config import FENCE_COOLDOWN, FENCED_PROTECTION, UNSUBSCRIBE_GOLD
 
 niuniu_register = on_alconna(
     Alconna("注册牛牛"),
@@ -82,8 +83,7 @@ niuniu_my_record = on_alconna(
 )
 
 
-user_fence_time_map = {}
-user_gluing_time_map = {}
+user_fence_time_map = user_fenced_time_map = user_gluing_time_map = {}
 
 driver = get_driver()
 
@@ -91,6 +91,7 @@ driver = get_driver()
 @driver.on_startup
 async def handle_connect():
     await Sqlite.init()
+    await Sqlite.fix_inf_data()
     old_data_path = Path(__file__).resolve().parent / "data" / "long.json"
     if old_data_path.exists():
         async with aiofiles.open(old_data_path, encoding="utf-8") as f:
@@ -132,12 +133,12 @@ async def _(session: Uninfo):
         await niuniu_unsubscribe.send(Text("你还没有牛牛呢！\n请发送'注册牛牛'领取你的牛牛!"), reply_to=True)
         return
     gold = (await UserConsole.get_user(uid)).gold
-    if gold < 500:
+    if gold < UNSUBSCRIBE_GOLD:
         await niuniu_unsubscribe.send(
-            Text("你的金币不足，无法注销牛牛！"), reply_to=True
+            Text(f"你的金币不足{UNSUBSCRIBE_GOLD}，无法注销牛牛！"), reply_to=True
         )
     else:
-        await UserConsole.reduce_gold(uid, 500, GoldHandle.PLUGIN, "niuniu")
+        await UserConsole.reduce_gold(uid, UNSUBSCRIBE_GOLD, GoldHandle.PLUGIN, "niuniu")
         await Sqlite.delete("users", {"uid": uid})
         await NiuNiu.record_length(uid, length, 0, "unsubscribe")
         await niuniu_unsubscribe.finish(Text("从今往后你就没有牛牛啦！"), reply_to=True)
@@ -150,8 +151,8 @@ async def _(session: Uninfo, msg: UniMsg):
     uid = session.user.id
     with contextlib.suppress(KeyError):
         time_pass = int(time.time() - user_fence_time_map[uid])
-        if time_pass < 180:
-            time_rest = 180 - time_pass
+        if time_pass < FENCE_COOLDOWN:
+            time_rest = FENCE_COOLDOWN - time_pass
             jj_refuse = [
                 f"才过去了{time_pass}s时间,你就又要击剑了，真是饥渴难耐啊",
                 f"不行不行，你的身体会受不了的，歇{time_rest}s再来吧",
@@ -179,8 +180,23 @@ async def _(session: Uninfo, msg: UniMsg):
         opponent_long = await NiuNiu.get_length(at)
         if not opponent_long:
             raise RuntimeError("对方还没有牛牛呢！不能击剑！")
-        user_fence_time_map[uid] = time.time()
+         # 新增被击剑者冷却检查
+        if user_fenced_time_map.get(at) is None:
+            fenced_time = await NiuNiu.last_fenced_time(at)
+        else:
+            fenced_time = user_fenced_time_map[at]
+        fenced_time_pass = int(time.time() - fenced_time)
+        if fenced_time_pass < FENCED_PROTECTION:  # 5分钟保护期
+            tips = [
+                f"对方刚被击剑过，需要休息{FENCED_PROTECTION-fenced_time_pass}秒才能再次被击剑",
+                f"对方牛牛还在恢复中，{FENCED_PROTECTION-fenced_time_pass}秒后再来吧",
+                f"禁止连续击剑同一用户！请等待{FENCED_PROTECTION-fenced_time_pass}秒"
+            ]
+            await niuniu_fencing.send(random.choice(tips), reply_message=True)
+            return
         result = await Fencing.fencing(my_long, opponent_long, at, uid)
+        user_fence_time_map[uid] = time.time()
+        user_fenced_time_map[at] = time.time()  # 新增被击剑者冷却
         await niuniu_fencing.send(result, reply_message=True)
     except RuntimeError as e:
         await niuniu_fencing.send(str(e), reply_message=True)

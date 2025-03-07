@@ -185,3 +185,20 @@ class Sqlite:
             await cursor.execute(query, tuple(conditions.values()))
             await cls.conn.commit()
         return True
+
+    @classmethod
+    async def fix_inf_data(cls):
+        await Sqlite.exec("""
+            UPDATE users SET 
+            length = CASE
+                WHEN length = 'inf' THEN 200 * (0.9 + RANDOM()*0.1)
+                WHEN length = '-inf' THEN -200 * (0.9 + RANDOM()*0.1)
+                ELSE length
+            END
+        """)
+        # 处理数值型异常
+        await Sqlite.exec("""
+            UPDATE users SET 
+            length = ROUND(COALESCE(NULLIF(length, 'NaN'), 10), 2)
+            WHERE typeof(length) != 'real'
+        """)

@@ -1,7 +1,7 @@
 import random
 import time
 
-from zhenxun.plugins.niuniu.niuniu import NiuNiu
+from .niuniu import NiuNiu
 
 
 class Fencing:
@@ -136,7 +136,13 @@ class Fencing:
         Returns:
             str: 包含结果的数组。
         """
-        reduce = await cls.fence(oppo)
+        base_change = min(abs(my), abs(oppo)) * 0.1  # 基于较小值计算变化量
+        reduce = await cls.fence(base_change)  # 传入基础变化量
+        reduce *= await NiuNiu.apply_decay(1)  # 🚨 全局衰减系数
+        
+        # 添加动态平衡系数
+        balance_factor = 1 - abs(my - oppo)/100  # 差距越大变化越小
+        reduce *= max(0.3, balance_factor)
         if increase_length:
             my += reduce
             oppo -= 0.8 * reduce
