@@ -27,7 +27,7 @@ from zhenxun.utils.platform import PlatformUtils
 
 from .database import Sqlite
 from .niuniu import NiuNiu
-from .config import FENCE_COOLDOWN, FENCED_PROTECTION, UNSUBSCRIBE_GOLD
+from .config import FENCE_COOLDOWN, FENCED_PROTECTION, GLUE_COOLDOWN, QUICK_GLUE_COOLDOWN, UNSUBSCRIBE_GOLD
 
 niuniu_register = on_alconna(
     Alconna("注册牛牛"),
@@ -337,10 +337,13 @@ async def hit_glue(session: Uninfo):
         )
         return
     new_length = origin_length
+    is_rapid_glue = False  # 标记是否快速打胶
     with contextlib.suppress(KeyError):
         time_pass = int(time.time() - user_gluing_time_map[uid])
-        if time_pass < 180:
-            time_rest = 180 - time_pass
+        if time_pass < QUICK_GLUE_COOLDOWN:
+            is_rapid_glue = True
+        if time_pass < GLUE_COOLDOWN:
+            time_rest = GLUE_COOLDOWN - time_pass
             glue_refuse = [
                 f"才过去了{time_pass}s时间,你就又要打🦶了，身体受得住吗",
                 f"不行不行，你的身体会受不了的，歇{time_rest}s再来吧",
@@ -350,10 +353,38 @@ async def hit_glue(session: Uninfo):
             await niuniu_hit_glue.send(random.choice(glue_refuse), reply_to=True)
             return
     user_gluing_time_map[uid] = time.time()
-    prob = random.choice([1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0])
+    if is_rapid_glue:
+    # 当快速打胶时减少正面概率，增加负面概率
+        prob_pool = [1, 1, 0, 0, 0, 0, -1, -1, -1, -1, 114514] 
+    else:
+        prob_pool = [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 114514]
+
+    prob = random.choice(prob_pool)
     diff = 0
+    if is_rapid_glue and prob == 1:  # 即使抽中增益也打折扣
+        new_length = round(origin_length + (diff * 0.1), 2)  # 增益效果打一折
+        diff = new_length - origin_length
+        result = random.choice([
+            f"这么着急？牛牛只微微增长了{diff}cm...🤏",
+            f"bro你搞这么快只会适得其反！牛牛只增加{diff}cm！😰",
+            f"牛牛还没冷却好！勉强增长{diff}cm！😖"
+        ])
+        await NiuNiu.update_length(uid, new_length)
+        await NiuNiu.record_length(uid, origin_length, new_length, "gluing")
+        await niuniu_hit_glue.send(Text(result), reply_to=True)
+        return
     if prob == 1:
         new_length, diff = await NiuNiu.gluing(origin_length)
+    elif prob == 114514 and origin_length > 0:
+        new_length = round(origin_length - (origin_length / 2), 2)
+        result = random.choice([
+            f"由于你在换蛋期打胶，你的牛牛断掉了呢！当前长度{new_length}cm!🤯",
+            f"bro换蛋期就不要打胶了！你的牛牛萎缩了{abs(diff)}cm！💩",
+        ])
+        await NiuNiu.update_length(uid, new_length)
+        await NiuNiu.record_length(uid, origin_length, new_length, "gluing")
+        await niuniu_hit_glue.send(Text(result), reply_to=True)
+        return
     if diff > 0:
         result = random.choice(
             [
