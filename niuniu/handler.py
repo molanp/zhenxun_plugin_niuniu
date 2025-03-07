@@ -357,13 +357,12 @@ async def hit_glue(session: Uninfo):
     # 当快速打胶时减少正面概率，增加负面概率
         prob_pool = [1, 1, 0, 0, 0, 0, -1, -1, -1, -1, 114514] 
     else:
-        prob_pool = [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 114514]
+        prob_pool = [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, -1, -1, 114514]
 
     prob = random.choice(prob_pool)
     diff = 0
     if is_rapid_glue and prob == 1:  # 即使抽中增益也打折扣
-        new_length = round(origin_length + (diff * 0.1), 2)  # 增益效果打一折
-        diff = new_length - origin_length
+        new_length, diff = await NiuNiu.gluing(origin_length, 0.1)
         result = random.choice([
             f"这么着急？牛牛只微微增长了{diff}cm...🤏",
             f"bro你搞这么快只会适得其反！牛牛只增加{diff}cm！😰",

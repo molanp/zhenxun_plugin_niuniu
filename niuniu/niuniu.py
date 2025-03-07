@@ -133,12 +133,12 @@ class NiuNiu:
         )
 
     @classmethod
-    async def gluing(cls, origin_length: float) -> tuple[float, float]:
+    async def gluing(cls, origin_length: float, discount: float = 1) -> tuple[float, float]:
         result = await cls.get_nearest_lengths(origin_length)
         if result[0] != 0 or result[1] != 0:
             growth_factor = max(0.5, 1 - abs(origin_length) / 200)  # 长度越大增长越慢
             new_length = (
-                origin_length + (result[0] * 0.3 - result[1] * 0.6) * growth_factor
+                origin_length + (result[0] * 0.3 - result[1] * 0.3) * growth_factor * discount
             )
             return round(new_length, 2), round(new_length - origin_length, 2)
 
