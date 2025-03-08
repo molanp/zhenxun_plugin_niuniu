@@ -1,76 +1,65 @@
 import random
 
+from nonebot import get_bot
 from nonebot_plugin_uninfo import Uninfo
+from tortoise.functions import Max, Min
 
+from zhenxun.services.log import logger
 from zhenxun.utils.image_utils import BuildImage, ImageTemplate
 from zhenxun.utils.platform import PlatformUtils
 
-from .database import Sqlite
+from .model import NiuNiuRecord, NiuNiuUser
 
 
 class NiuNiu:
     @classmethod
-    async def get_length(cls, uid: int) -> str | None:
-        data = Sqlite.query("users", columns=["length"], conditions={"uid": uid})
-        return data[0]["length"] if isinstance(data, list) else None
+    async def get_length(cls, uid: int | str) -> float | None:
+        user = await NiuNiuUser.get_or_none(uid=uid).values("length")
+        return user["length"] if user else None
 
     @classmethod
-    async def random_length(cls) -> str:
-        sql = "SELECT length FROM users ORDER BY length"
-        results = await Sqlite.exec(sql)
+    async def random_length(cls) -> float:
+        users = await NiuNiuUser.all().order_by("length").values("length")
 
-        if not results:
-            origin_length = 10
+        if not users:
+            origin_length = 10.0
         else:
-            length_values = [row["length"] for row in results]
-            n = len(length_values)
-
-            if n == 1:
-                origin_length = length_values[0]
-            index = int(n * 0.3)
+            length_values = [u["length"] for u in users]
+            index = min(int(len(length_values) * 0.3), len(length_values) - 1)
             origin_length = float(length_values[index])
-        return str(round(origin_length * 0.9, 2))
+
+        return round(origin_length * 0.9, 2)
 
     @classmethod
     async def latest_gluing_time(cls, uid: int) -> str:
-        data = await Sqlite.query(
-            "records",
-            columns=["time"],
-            conditions={"uid": uid, "action": "gluing"},
-            order_by="time DESC",
-            limit=1,
+        record = (
+            await NiuNiuRecord.filter(uid=uid, action="gluing")
+            .order_by("-time")
+            .first()
+            .values("time")
         )
-        return data[0]["time"] if data else "暂无记录"
+
+        return record["time"] if record else "暂无记录"
 
     @classmethod
     async def get_nearest_lengths(cls, target_length: float) -> list[float]:
-        # 查询比 target_length 大的最小值
-        sql_greater = """
-            SELECT MIN(length) AS length FROM users
-            WHERE length > ?
-        """
-        result_greater = await Sqlite.exec(sql_greater, target_length)
-
-        # 查询比 target_length 小的最大值
-        sql_less = """
-            SELECT MAX(length) AS length FROM users
-            WHERE length < ?
-        """
-        result_less = await Sqlite.exec(sql_less, target_length)
-
-        # 提取结果
+        # 使用ORM聚合查询
         greater_length = (
-            result_greater[0]["length"]
-            if result_greater and result_greater[0]["length"] is not None
-            else 0
-        )
-        less_length = (
-            result_less[0]["length"]
-            if result_less and result_less[0]["length"] is not None
-            else 0
+            await NiuNiuUser.filter(length__gt=target_length)
+            .annotate(min_length=Min("length"))
+            .values("min_length")
         )
 
-        return [greater_length, less_length]
+        less_length = (
+            await NiuNiuUser.filter(length__lt=target_length)
+            .annotate(max_length=Max("length"))
+            .values("max_length")
+        )
+
+        return [
+            greater_length[0]["min_length"] if greater_length else 0,
+            less_length[0]["max_length"] if less_length else 0,
+        ]
 
     @classmethod
     async def gluing(cls, origin_length: float) -> tuple[float, float]:
@@ -165,82 +154,72 @@ class NiuNiu:
 
     @classmethod
     async def rank(
-        cls, bot, num: int, session: Uninfo, deep: bool = False, is_all: bool = False
+        cls, num: int, session: Uninfo, deep: bool = False, is_all: bool = False
     ) -> BuildImage | str:
-        """牛牛排行
-
-        参数:
-            bot: Bot
-            num: 排行榜数量
-            session: Uninfo
-            deep: 是否深度排行
-            is_all: 是否显示所有用户
-        返回:
-            BuildImage: 构造图片
-        """
-        user_length_map = []
-        uid2name = {}
         data_list = []
-        order = "length ASC" if deep else "length DESC"
+        order = "length" if deep else "-length"
+
+        # 构建基础查询
+        query = NiuNiuUser.all().order_by(order)
+        uid2name = {}
+        bot = get_bot(self_id=session.self_id)
         if not is_all and session.group:
-            user_ids = {
-                user["user_id"]: user["nickname"]
-                for user in await bot.get_group_member_list(group_id=session.group.id)
-            }
-            uid2name = user_ids.copy()
-            if user_ids:
-                user_data = await Sqlite.query(
-                    table="users",
-                    columns=["uid", "length"],
-                    order_by=order,
-                    limit=num,
+            try:
+                group_members = await bot.get_group_member_list(
+                    group_id=session.group.id
                 )
-                for user in user_data:
-                    uid = user["uid"]
-                    length = user["length"]
-                    if uid in user_ids and (
-                        (deep and length <= 0) or (not deep and length >= 0)
-                    ):
-                        user_length_map.append([uid, length])
-        else:
-            user_data = await Sqlite.query(
-                table="users",
-                columns=["uid", "length"],
-                order_by=order,
-                limit=num,
-            )
-            user_length_map.extend(
-                [user["uid"], user["length"]]
-                for user in user_data
-                if (deep and user["length"] <= 0) or (not deep and user["length"] > 0)
-            )
-        if not user_length_map:
+                user_ids = [
+                    int(member["user_id"]) for member in group_members
+                ]  # 修复4: 统一为int类型
+                query = query.filter(uid__in=user_ids)
+                uid2name = {
+                    int(member["user_id"]): member["nickname"]
+                    for member in group_members
+                }
+            except Exception as e:
+                logger.error("获取群成员失败", "niuniu", e=e)
+                return f"获取群成员失败: {e!s}"
+
+        # 执行查询并转换数据
+        users = await query.limit(num).values("uid", "length")
+        if not users:
             return "当前还没有人有牛牛哦..."
-        user_id_list = [sublist[0] for sublist in user_length_map]
 
-        if int(session.user.id) in user_id_list:
-            index = user_id_list.index(int(session.user.id)) + 1
-        else:
-            index = "-1（未统计）"
+        # 修复5: 直接使用ORM查询结果
+        user_id_list = [user["uid"] for user in users]
+        index = (
+            user_id_list.index(int(session.user.id)) + 1
+            if int(session.user.id) in user_id_list
+            else "-1（未统计）"
+        )
 
-        column_name = ["排名", "头像", "名称", "长度"]
-        for i, (uid, length) in enumerate(user_length_map):
-            bytes = await PlatformUtils.get_user_avatar(str(uid), "qq", session.self_id)
-            data_list.append(
-                [
-                    f"{i + 1}",
-                    (bytes, 30, 30),
-                    uid2name.get(uid)
-                    or (await bot.get_stranger_info(user_id=uid))["nickname"],
-                    length,
-                ]
+        # 构建表格数据
+        for i, user in enumerate(users):
+            uid = user["uid"]
+            length = user["length"]
+
+            # 获取用户头像
+            avatar_bytes = await PlatformUtils.get_user_avatar(
+                str(uid), "qq", session.self_id
             )
-        title_1 = "深度" if deep else "长度"
-        if session.group:
-            title = f"{title_1}群组内排行"
-            tip = f"你的排名在本群第 {index} 位哦!"
-        else:
-            title = f"{title_1}全局排行"
-            tip = f"你的排名在全局第 {index} 位哦!"
 
-        return await ImageTemplate.table_page(title, tip, column_name, data_list)
+            # 获取用户昵称
+            nickname = (
+                uid2name.get(uid)
+                or (await bot.get_stranger_info(user_id=uid))["nickname"]
+            )
+
+            data_list.append([f"{i + 1}", (avatar_bytes, 30, 30), nickname, length])
+
+        # 生成标题
+        title_type = "深度" if deep else "长度"
+        scope = "群组内" if session.group else "全局"
+        title = f"{title_type}{scope}排行"
+        tip = f"你的排名在{scope}第 {index} 位哦!"
+
+        return await ImageTemplate.table_page(
+            head_text=title,
+            tip_text=tip,
+            column_name=["排名", "头像", "名称", "长度"],
+            data_list=data_list,
+        )

@@ -1,6 +1,7 @@
 import random
 import time
 
+from .model import NiuNiuUser
 from .niuniu import NiuNiu
 
 
@@ -42,25 +43,31 @@ class Fencing:
             oppo_length *= 0.65 + min(abs(loss_limit * my_length), abs(1.5 * my_length))
             my_length -= min(abs(loss_limit * my_length), abs(1.5 * my_length))
             my_length = my_length * -1
-            result = f"对方身为魅魔诱惑了你,你同化成魅魔!当前长度{round(my_length,2)}cm!"
+            result = (
+                f"对方身为魅魔诱惑了你,你同化成魅魔!当前长度{round(my_length, 2)}cm!"
+            )
         elif oppo_length >= 100 and my_length > 0 and 10 < probability <= 20:
             oppo_length *= 0.65 + min(
                 abs(devour_limit * my_length), abs(1.5 * my_length)
             )
             my_length -= min(abs(devour_limit * my_length), abs(1.5 * my_length))
-            result = f"对方以牛头人的荣誉摧毁了你的牛牛!当前长度{round(my_length, 2)}cm!"
+            result = (
+                f"对方以牛头人的荣誉摧毁了你的牛牛!当前长度{round(my_length, 2)}cm!"
+            )
         elif my_length <= -100 and oppo_length > 0 and 10 < probability <= 20:
             my_length *= 0.65 + min(
                 abs(loss_limit * oppo_length), abs(1.5 * oppo_length)
             )
             oppo_length -= min(abs(loss_limit * oppo_length), abs(1.5 * oppo_length))
-            result = f"你身为魅魔诱惑了对方,吞噬了对方部分长度!当前长度{round(my_length, 2)}cm!"
+            result = f"你身为魅魔诱惑了对方,吞噬了对方部分长度!当前长度{round(my_length, 2)}cm!"  # noqa: E501
         elif my_length >= 100 and oppo_length > 0 and 10 < probability <= 20:
             my_length *= 0.65 + min(
                 abs(devour_limit * oppo_length), abs(1.5 * oppo_length)
             )
             oppo_length -= min(abs(devour_limit * oppo_length), abs(1.5 * oppo_length))
-            result = f"你以牛头人的荣誉摧毁了对方的牛牛!当前长度{round(my_length, 2)}cm!"
+            result = (
+                f"你以牛头人的荣誉摧毁了对方的牛牛!当前长度{round(my_length, 2)}cm!"
+            )
         else:
             # 通过击剑技巧来决定结果
             result, my_length, oppo_length = await cls.determine_result_by_skill(
@@ -140,9 +147,9 @@ class Fencing:
         base_change = min(abs(my), abs(oppo)) * 0.1  # 基于较小值计算变化量
         reduce = await cls.fence(base_change)  # 传入基础变化量
         reduce *= await NiuNiu.apply_decay(1)  # 🚨 全局衰减系数
-        
+
         # 添加动态平衡系数
-        balance_factor = 1 - abs(my - oppo)/100  # 差距越大变化越小
+        balance_factor = 1 - abs(my - oppo) / 100  # 差距越大变化越小
         reduce *= max(0.3, balance_factor)
         if increase_length:
             my += reduce
@@ -150,25 +157,25 @@ class Fencing:
             if my < 0:
                 result = random.choice(
                     [
-                        f"哦吼!？你的牛牛在长大欸!长大了{reduce}cm!",
-                        f"牛牛凹进去的深度变浅了欸!变浅了{reduce}cm!",
+                        f"哦吼!？你的牛牛在长大欸!长大了{round(reduce, 2)}cm!",
+                        f"牛牛凹进去的深度变浅了欸!变浅了{round(reduce, 2)}cm!",
                     ]
                 )
             else:
-                result = f"你以绝对的长度让对方屈服了呢!你的长度增加{reduce}cm,对方减少了{round(0.8*reduce, 2)}cm!你当前长度为{round(my, 2)}cm!"  # noqa: E501
+                result = f"你以绝对的长度让对方屈服了呢!你的长度增加{round(reduce, 2)}cm,对方减少了{round(0.8 * reduce, 2)}cm!你当前长度为{round(my, 2)}cm!"  # noqa: E501
         else:
             my -= reduce
             oppo += 0.8 * reduce
             if my < 0:
                 result = random.choice(
                     [
-                        f"哦吼!？看来你的牛牛因为击剑而凹进去了呢🤣🤣🤣!凹进去了{reduce}cm!",
-                        f"由于对方击剑技术过于高超,造成你的牛牛凹了进去呢😰!凹进去了{reduce}cm!",
-                        f"好惨啊,本来就不长的牛牛现在凹进去了呢😂!凹进去了{reduce}cm!",
+                        f"哦吼!？看来你的牛牛因为击剑而凹进去了呢🤣🤣🤣!凹进去了{round(reduce, 2)}cm!",
+                        f"由于对方击剑技术过于高超,造成你的牛牛凹了进去呢😰!凹进去了{round(reduce, 2)}cm!",
+                        f"好惨啊,本来就不长的牛牛现在凹进去了呢😂!凹进去了{round(reduce, 2)}cm!",
                     ]
                 )
             else:
-                result = f"对方以绝对的长度让你屈服了呢!你的长度减少{reduce}cm,当前长度{round(my, 2)}cm!"  # noqa: E501
+                result = f"对方以绝对的长度让你屈服了呢!你的长度减少{round(reduce, 2)}cm,当前长度{round(my, 2)}cm!"  # noqa: E501
         return result, my, oppo
 
     @classmethod
@@ -185,7 +192,7 @@ class Fencing:
         new_oppo = round(data["new_oppo"], 2)
         origin_my = round(data["origin_my"], 2)
         origin_oppo = round(data["origin_oppo"], 2)
-        await NiuNiu.update_length(my_qq, new_my)
+        await NiuNiuUser.filter(uid=my_qq).update(length=new_my)
         await NiuNiu.record_length(my_qq, origin_my, new_my, "fencing")
-        await NiuNiu.update_length(at_qq, new_oppo)
+        await NiuNiuUser.filter(uid=at_qq).update(length=new_oppo)
         await NiuNiu.record_length(at_qq, origin_oppo, new_oppo, "fenced")
