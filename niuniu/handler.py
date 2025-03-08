@@ -114,10 +114,10 @@ async def start():
 @niuniu_register.handle()
 async def _(session: Uninfo):
     uid = str(session.user.id)
-    length = await NiuNiu.random_length()
-    if NiuNiuUser.filter(uid=uid).exists():
+    if await NiuNiuUser.filter(uid=uid).exists():
         await niuniu_register.send(Text("你已经有过牛牛啦！"), reply_to=True)
         return
+    length = await NiuNiu.random_length()
     await NiuNiuUser.create(uid=uid, length=length)
     await NiuNiu.record_length(uid, 0, length, "register")
     await niuniu_register.send(Text(f"牛牛长出来啦！足足有{length}cm呢"), reply_to=True)
