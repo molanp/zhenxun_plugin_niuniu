@@ -18,16 +18,26 @@ from nonebot_plugin_alconna import (
 )
 from nonebot_plugin_htmlrender import template_to_pic
 from nonebot_plugin_uninfo import Uninfo
+from tortoise.exceptions import DoesNotExist
 
+from zhenxun.configs.path_config import DATA_PATH
 from zhenxun.models.user_console import UserConsole
-from zhenxun.plugins.niuniu.fence import Fencing
 from zhenxun.utils.enum import GoldHandle
 from zhenxun.utils.message import MessageUtils
 from zhenxun.utils.platform import PlatformUtils
 
+from .config import (
+    FENCE_COOLDOWN,
+    FENCED_PROTECTION,
+    GLUE_COOLDOWN,
+    PLOCE_BAN,
+    QUICK_GLUE_COOLDOWN,
+    UNSUBSCRIBE_GOLD,
+)
 from .database import Sqlite
+from .fence import Fencing
+from .model import NiuNiuUser
 from .niuniu import NiuNiu
-from .config import FENCE_COOLDOWN, FENCED_PROTECTION, GLUE_COOLDOWN, QUICK_GLUE_COOLDOWN, UNSUBSCRIBE_GOLD
 
 niuniu_register = on_alconna(
     Alconna("注册牛牛"),
@@ -89,15 +99,15 @@ driver = get_driver()
 
 
 @driver.on_startup
-async def handle_connect():
-    await Sqlite.init()
-    await Sqlite.fix_inf_data()
+async def start():
     old_data_path = Path(__file__).resolve().parent / "data" / "long.json"
     if old_data_path.exists():
         async with aiofiles.open(old_data_path, encoding="utf-8") as f:
             file_data = f.read()
         await Sqlite.json2db(file_data)
         old_data_path.unlink()
+    if Path(DATA_PATH / "niuniu" / "data.db").exists():
+        await Sqlite.sqlite2db()
     return
 
 
@@ -105,24 +115,12 @@ async def handle_connect():
 async def _(session: Uninfo):
     uid = str(session.user.id)
     length = await NiuNiu.random_length()
-    if await Sqlite.insert(
-        "users", {"uid": uid, "length": length, "sex": "boy"}, {"uid": uid}
-    ):
-        await Sqlite.insert(
-            "records",
-            {
-                "uid": uid,
-                "origin_length": 0,
-                "diff": length,
-                "new_length": length,
-                "action": "register",
-            },
-        )
-        await niuniu_register.send(
-            Text(f"牛牛长出来啦！足足有{length}cm呢"), reply_to=True
-        )
-    else:
+    if NiuNiuUser.filter(uid=uid).exists():
         await niuniu_register.send(Text("你已经有过牛牛啦！"), reply_to=True)
+        return
+    await NiuNiuUser.create(uid=uid, length=length)
+    await NiuNiu.record_length(uid, 0, length, "register")
+    await niuniu_register.send(Text(f"牛牛长出来啦！足足有{length}cm呢"), reply_to=True)
 
 
 @niuniu_unsubscribe.handle()
@@ -130,7 +128,9 @@ async def _(session: Uninfo):
     uid = str(session.user.id)
     length = await NiuNiu.get_length(uid)
     if not length:
-        await niuniu_unsubscribe.send(Text("你还没有牛牛呢！\n请发送'注册牛牛'领取你的牛牛!"), reply_to=True)
+        await niuniu_unsubscribe.send(
+            Text("你还没有牛牛呢！\n请发送'注册牛牛'领取你的牛牛!"), reply_to=True
+        )
         return
     gold = (await UserConsole.get_user(uid)).gold
     if gold < UNSUBSCRIBE_GOLD:
@@ -138,8 +138,10 @@ async def _(session: Uninfo):
             Text(f"你的金币不足{UNSUBSCRIBE_GOLD}，无法注销牛牛！"), reply_to=True
         )
     else:
-        await UserConsole.reduce_gold(uid, UNSUBSCRIBE_GOLD, GoldHandle.PLUGIN, "niuniu")
-        await Sqlite.delete("users", {"uid": uid})
+        await UserConsole.reduce_gold(
+            uid, UNSUBSCRIBE_GOLD, GoldHandle.PLUGIN, "niuniu"
+        )
+        await NiuNiuUser.filter(uid=uid).delete()
         await NiuNiu.record_length(uid, length, 0, "unsubscribe")
         await niuniu_unsubscribe.finish(Text("从今往后你就没有牛牛啦！"), reply_to=True)
 
@@ -167,7 +169,9 @@ async def _(session: Uninfo, msg: UniMsg):
     my_long = await NiuNiu.get_length(uid)
     try:
         if not my_long:
-            raise RuntimeError("你还没有牛牛呢！不能击剑！\n请发送'注册牛牛'领取你的牛牛!")
+            raise RuntimeError(
+                "你还没有牛牛呢！不能击剑！\n请发送'注册牛牛'领取你的牛牛!"
+            )
         at = str(at_list[0])
         if len(at_list) >= 2:
             raise RuntimeError(
@@ -180,7 +184,7 @@ async def _(session: Uninfo, msg: UniMsg):
         opponent_long = await NiuNiu.get_length(at)
         if not opponent_long:
             raise RuntimeError("对方还没有牛牛呢！不能击剑！")
-         # 新增被击剑者冷却检查
+        # 新增被击剑者冷却检查
         if user_fenced_time_map.get(at) is None:
             fenced_time = await NiuNiu.last_fenced_time(at)
         else:
@@ -188,9 +192,9 @@ async def _(session: Uninfo, msg: UniMsg):
         fenced_time_pass = int(time.time() - fenced_time)
         if fenced_time_pass < FENCED_PROTECTION:  # 5分钟保护期
             tips = [
-                f"对方刚被击剑过，需要休息{FENCED_PROTECTION-fenced_time_pass}秒才能再次被击剑",
-                f"对方牛牛还在恢复中，{FENCED_PROTECTION-fenced_time_pass}秒后再来吧",
-                f"禁止连续击剑同一用户！请等待{FENCED_PROTECTION-fenced_time_pass}秒"
+                f"对方刚被击剑过，需要休息{FENCED_PROTECTION - fenced_time_pass}秒才能再次被击剑",  # noqa: E501
+                f"对方牛牛还在恢复中，{FENCED_PROTECTION - fenced_time_pass}秒后再来吧",
+                f"禁止连续击剑同一用户！请等待{FENCED_PROTECTION - fenced_time_pass}秒",
             ]
             await niuniu_fencing.send(random.choice(tips), reply_message=True)
             return
@@ -206,40 +210,36 @@ async def _(session: Uninfo, msg: UniMsg):
 async def _(session: Uninfo):
     uid = int(session.user.id)
     if not await NiuNiu.get_length(uid):
-        await niuniu_my.send(Text("你还没有牛牛呢！\n请发送'注册牛牛'领取你的牛牛!"), reply_to=True)
+        await niuniu_my.send(
+            Text("你还没有牛牛呢！\n请发送'注册牛牛'领取你的牛牛!"), reply_to=True
+        )
         return
 
-    sql = """
-    WITH RankedUsers AS (
-        SELECT
-            uid,
-            length,
-            (SELECT COUNT(*)
-             FROM users u2
-             WHERE u2.length > u1.length) + 1 AS rank
-        FROM
-            users u1
-    )
-    SELECT
-        ru.uid,
-        ru.length,
-        ru.rank,
-        (SELECT u3.uid FROM RankedUsers u3 WHERE u3.rank = ru.rank - 1) AS next_uid,
-        (
-            SELECT u3.length FROM RankedUsers u3 WHERE u3.rank = ru.rank - 1
-        ) AS next_length,
-        (SELECT u3.rank FROM RankedUsers u3 WHERE u3.rank = ru.rank - 1) AS next_rank
-    FROM
-        RankedUsers ru
-    WHERE
-        ru.uid = ?
-    """
-
-    results = await Sqlite.exec(sql, uid)
-    if not results:
+    try:
+        current_user = await NiuNiuUser.get(uid=uid)
+    except DoesNotExist:
         await niuniu_my.send(Text("未查询到数据..."), reply_to=True)
         return
-    user = results[0]
+
+    # 计算排名逻辑
+    rank = await NiuNiuUser.filter(length__gt=current_user.length).count() + 1
+
+    # 获取前一名用户
+    prev_user = (
+        await NiuNiuUser.filter(length__lt=current_user.length)
+        .order_by("-length")
+        .first()
+    )
+
+    # 构造结果数据
+    user = {
+        "uid": current_user.uid,
+        "length": current_user.length,
+        "rank": rank,
+        "next_uid": prev_user.uid if prev_user else None,
+        "next_length": prev_user.length if prev_user else None,
+        "next_rank": rank - 1 if prev_user else None,
+    }
     avatar = await PlatformUtils.get_user_avatar(str(uid), "qq", session.self_id)
     avatar = "" if avatar is None else base64.b64encode(avatar).decode("utf-8")
     if user.get("next_uid"):
@@ -332,14 +332,21 @@ async def hit_glue(session: Uninfo):
     origin_length = await NiuNiu.get_length(uid)
     if not origin_length:
         await niuniu_hit_glue.send(
-            Text(random.choice(["你还没有牛牛呢！不能打胶！\n请发送'注册牛牛'", "无牛牛，打胶不要的!\n请发送'注册牛牛'"])),
+            Text(
+                random.choice(
+                    [
+                        "你还没有牛牛呢！不能打胶！\n请发送'注册牛牛'",
+                        "无牛牛，打胶不要的!\n请发送'注册牛牛'",
+                    ]
+                )
+            ),
             reply_to=True,
         )
         return
     new_length = origin_length
-    is_rapid_glue = False  # 标记是否快速打胶
+    is_rapid_glue = False
     with contextlib.suppress(KeyError):
-        time_pass = int(time.time() - user_gluing_time_map[uid])
+        time_pass = abs(int(time.time() - user_gluing_time_map[uid]))
         if time_pass < QUICK_GLUE_COOLDOWN:
             is_rapid_glue = True
         if time_pass < GLUE_COOLDOWN:
@@ -354,32 +361,48 @@ async def hit_glue(session: Uninfo):
             return
     user_gluing_time_map[uid] = time.time()
     if is_rapid_glue:
-    # 当快速打胶时减少正面概率，增加负面概率
-        prob_pool = [1, 1, 0, 0, 0, 0, -1, -1, -1, -1, 114514] 
+        prob_pool = [1, 1, 0, 0, 0, 0, -1, -1, -1, -1, 3, 2, 2, 2]
     else:
-        prob_pool = [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, -1, -1, 114514]
+        #prob_pool = [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, -1, -1, 3, 2, 2, 4]
+        prob_pool = [4]
 
     prob = random.choice(prob_pool)
     diff = 0
-    if is_rapid_glue and prob == 1:  # 即使抽中增益也打折扣
+    if is_rapid_glue and prob == 1:
         new_length, diff = await NiuNiu.gluing(origin_length, 0.1)
-        result = random.choice([
-            f"这么着急？牛牛只微微增长了{diff}cm...🤏",
-            f"bro你搞这么快只会适得其反！牛牛只增加{diff}cm！😰",
-            f"牛牛还没冷却好！勉强增长{diff}cm！😖"
-        ])
+        result = random.choice(
+            [
+                f"这么着急？牛牛只微微增长了{diff}cm...🤏",
+                f"bro你搞这么快只会适得其反！牛牛只增加{diff}cm！😰",
+                f"牛牛还没冷却好！勉强增长{diff}cm！😖",
+            ]
+        )
         await NiuNiu.update_length(uid, new_length)
         await NiuNiu.record_length(uid, origin_length, new_length, "gluing")
         await niuniu_hit_glue.send(Text(result), reply_to=True)
         return
     if prob == 1:
         new_length, diff = await NiuNiu.gluing(origin_length)
-    elif prob == 114514 and origin_length > 0:
+    elif prob == 3 and origin_length > 0:
         new_length = round(origin_length - (origin_length / 2), 2)
-        result = random.choice([
-            f"由于你在换蛋期打胶，你的牛牛断掉了呢！当前长度{new_length}cm!🤯",
-            f"bro换蛋期就不要打胶了！你的牛牛萎缩了{abs(diff)}cm！💩",
-        ])
+        result = random.choice(
+            [
+                f"由于你在换蛋期打胶，你的牛牛断掉了呢！当前长度{new_length}cm!🤯",
+                f"bro换蛋期就不要打胶了！你的牛牛萎缩了{abs(diff)}cm！💩",
+            ]
+        )
+        await NiuNiu.update_length(uid, new_length)
+        await NiuNiu.record_length(uid, origin_length, new_length, "gluing")
+        await niuniu_hit_glue.send(Text(result), reply_to=True)
+        return
+    elif prob == 2:
+        result = f"打胶时被窗外的路人发现了，对方报警了，你被抓走了！关进小黑屋里{PLOCE_BAN}s!"  # noqa: E501
+        user_gluing_time_map[uid] = time.time() + PLOCE_BAN
+        await niuniu_hit_glue.send(Text(result), reply_to=True)
+        return
+    elif prob == 4:
+        new_length, diff = await NiuNiu.gluing(origin_length, 1.2)
+        result = f"你收到了群主私发的女装，冲！！！牛牛长大了{diff}cm！👗"
         await NiuNiu.update_length(uid, new_length)
         await NiuNiu.record_length(uid, origin_length, new_length, "gluing")
         await niuniu_hit_glue.send(Text(result), reply_to=True)
@@ -399,9 +422,9 @@ async def hit_glue(session: Uninfo):
             [
                 "你打了个🦶，但是什么变化也没有，好奇怪捏~🤷‍♂️",
                 "你的牛牛刚开始变长了，可过了一会又回来了，什么变化也没有，好奇怪捏~🤷‍♀️",
-                "你的一🦶仿佛被牛牛躲开了，没有任何变化！😄",
+                "你准备🦌的时候发现今天是疯狂星期四，先V我50!😄",
                 "你的牛牛看起来很开心，但没有变化！😊",
-                "你的一🦶仿佛被牛牛用尾巴挡住了，没有任何变化！💃",
+                "你在打胶时，感觉这个世界似乎发生了什么变化🤔",
             ]
         )
     else:
@@ -420,10 +443,12 @@ async def hit_glue(session: Uninfo):
             result = random.choice(
                 [
                     f"阿哦，你过度打🦶，牛牛缩短了{diff_}cm了呢！😢",
+                    f"🦌的时候突然响起了届かない恋！你听了之后想起了自己的往事, 伤心之余发觉牛牛缩短了{diff_}cm。"  # noqa: E501
                     f"你的牛牛变长了很多，你很激动地继续打🦶，然后牛牛缩短了{diff_}cm呢！🤦‍♂️",
                     f"小打怡情，大打伤身，强打灰飞烟灭！你过度打🦶，牛牛缩短了{diff_}cm捏！💥",
                     f"你的牛牛看起来很受伤，缩短了{diff_}cm！🤕",
                     f"你的打🦶没效果，于是很气急败坏地继续打🦶，然后牛牛缩短了{diff_}cm呢！🤦‍♂️",
+                    f"🦌太多次导致身体虚弱，牛牛长度减少了{diff_}cm!",
                 ]
             )
 
@@ -471,7 +496,11 @@ async def my_record(session: Uninfo, match: Match[int]):
                 "origin": record["origin_length"],
                 "new": record["new_length"],
                 "diff": f"+{record['diff']}" if record["diff"] > 0 else record["diff"],
-                "diff_color": "green" if record["diff"] > 0 else "red",
+                "diff_color": "positive"
+                if record["diff"] > 0
+                else "negative"
+                if record["diff"] < 0
+                else "neutral",
             }
             for record in records
         ],
