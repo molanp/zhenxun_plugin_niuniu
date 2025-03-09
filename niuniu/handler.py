@@ -227,9 +227,9 @@ async def _(session: Uninfo):
     rank = await NiuNiuUser.filter(length__gt=current_user.length).count() + 1
 
     # 获取前一名用户
-    prev_user = (
+    next_user = (
         await NiuNiuUser.filter(length__lt=current_user.length)
-        .order_by("-length")
+        .order_by("length")
         .first()
     )
 
@@ -238,9 +238,9 @@ async def _(session: Uninfo):
         "uid": current_user.uid,
         "length": current_user.length,
         "rank": rank,
-        "next_uid": prev_user.uid if prev_user else None,
-        "next_length": prev_user.length if prev_user else None,
-        "next_rank": rank - 1 if prev_user else None,
+        "next_uid": next_user.uid if next_user else None,
+        "next_length": next_user.length if next_user else None,
+        "next_rank": rank - 1 if next_user else None,
     }
     avatar = await PlatformUtils.get_user_avatar(str(uid), "qq", session.self_id)
     avatar = "" if avatar is None else base64.b64encode(avatar).decode("utf-8")
