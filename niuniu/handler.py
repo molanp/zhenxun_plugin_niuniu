@@ -363,8 +363,7 @@ async def hit_glue(session: Uninfo):
     if is_rapid_glue:
         prob_pool = [1, 1, 0, 0, 0, 0, -1, -1, -1, -1, 3, 2, 2, 2]
     else:
-        #prob_pool = [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, -1, -1, 3, 2, 2, 4]
-        prob_pool = [4]
+        prob_pool = [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, -1, -1, 3, 2, 2, 4]
 
     prob = random.choice(prob_pool)
     diff = 0
