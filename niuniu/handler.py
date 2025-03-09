@@ -238,7 +238,7 @@ async def _(session: Uninfo):
     result = {
          "avatar": f"data:image/png;base64,{avatar}",
          "name": session.user.name,
-         rank": user["rank"],
+         "rank": user["rank"],
          "my_length": user["length"],
          "difference": "不适用",
          "latest_gluing_time": await NiuNiu.latest_gluing_time(uid),
