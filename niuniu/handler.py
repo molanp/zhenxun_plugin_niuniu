@@ -226,48 +226,24 @@ async def _(session: Uninfo):
     # 计算排名逻辑
     rank = await NiuNiuUser.filter(length__gt=current_user.length).count() + 1
 
-    # 获取前一名用户
-    next_user = (
-        await NiuNiuUser.filter(length__lt=current_user.length)
-        .order_by("length")
-        .first()
-    )
-
     # 构造结果数据
     user = {
         "uid": current_user.uid,
         "length": current_user.length,
-        "rank": rank,
-        "next_uid": next_user.uid if next_user else None,
-        "next_length": next_user.length if next_user else None,
-        "next_rank": rank - 1 if next_user else None,
+        "rank": rank
     }
     avatar = await PlatformUtils.get_user_avatar(str(uid), "qq", session.self_id)
     avatar = "" if avatar is None else base64.b64encode(avatar).decode("utf-8")
-    if user.get("next_uid"):
-        rank = user["rank"]
-        next_uid = user["next_uid"]  # noqa: F841
-        next_length = user["next_length"]
-        next_rank = user["next_rank"]  # noqa: F841
-        result = {
-            "avatar": f"data:image/png;base64,{avatar}",
-            "name": session.user.name,
-            "rank": rank,
-            "my_length": user["length"],
-            "difference": round(next_length - user["length"], 2),
-            "latest_gluing_time": await NiuNiu.latest_gluing_time(uid),
-            "comment": await NiuNiu.comment(user["length"]),
-        }
-    else:
-        result = {
-            "avatar": f"data:image/png;base64,{avatar}",
-            "name": session.user.name,
-            "rank": user["rank"],
-            "my_length": user["length"],
-            "difference": 0,
-            "latest_gluing_time": await NiuNiu.latest_gluing_time(uid),
-            "comment": await NiuNiu.comment(user["length"]),
-        }
+    
+    result = {
+         "avatar": f"data:image/png;base64,{avatar}",
+         "name": session.user.name,
+         rank": user["rank"],
+         "my_length": user["length"],
+         "difference": "不适用",
+         "latest_gluing_time": await NiuNiu.latest_gluing_time(uid),
+         "comment": await NiuNiu.comment(user["length"]),
+    }
     template_dir = Path(__file__).resolve().parent / "templates"
     pic = await template_to_pic(
         template_path=str(template_dir),
