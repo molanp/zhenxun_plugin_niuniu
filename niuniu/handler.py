@@ -93,7 +93,9 @@ niuniu_my_record = on_alconna(
 )
 
 
-user_fence_time_map = user_fenced_time_map = user_gluing_time_map = {}
+user_fence_time_map = {}
+user_fenced_time_map = {} 
+user_gluing_time_map = {}
 
 driver = get_driver()
 
