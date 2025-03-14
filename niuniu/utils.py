@@ -6,6 +6,7 @@ class UserState:
     _state: ClassVar[dict[str, dict[Any, Any]]] = {
         "buff_map": {},
         "prop_map": {},
+        "user_props": {},
         "fence_time_map": {},
         "fenced_time_map": {},
         "gluing_time_map": {},
