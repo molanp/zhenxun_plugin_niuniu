@@ -193,6 +193,8 @@ async def _(session: Uninfo, msg: UniMsg):
 
         # 处理击剑逻辑
         result = await Fencing.fencing(my_long, opponent_long, at, uid)
+        fence_time_map[uid] = time.time()   # 更新本地fence_time_map
+        fenced_time_map[at] = time.time()     # 更新本地fenced_time_map
 
         # 更新数据
         await UserState.update(
