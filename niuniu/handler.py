@@ -141,9 +141,11 @@ async def _(session: Uninfo):
 async def _(session: Uninfo, msg: UniMsg):
     at_list = [i.target for i in msg if isinstance(i, At)]
     uid = session.user.id
+    fence_time_map = await UserState.get("fence_time_map")  
+    fenced_time_map = await UserState.get("fenced_time_map")  
     with contextlib.suppress(KeyError):
         time_pass = int(
-            time.time() - (await UserState.get("fence_time_map")).get(uid, 0)
+            time.time() - fence_time_map.get(uid, 0)
         )
         if time_pass < FENCE_COOLDOWN:
             time_rest = FENCE_COOLDOWN - time_pass
@@ -177,10 +179,10 @@ async def _(session: Uninfo, msg: UniMsg):
         if not opponent_long:
             raise RuntimeError("对方还没有牛牛呢！不能击剑！")
         # 被击剑者冷却检查
-        if (await UserState.get("fenced_time_map")).get(at) is None:
+        if fenced_time_map.get(at) is None:
             fenced_time = await NiuNiu.last_fenced_time(at)
         else:
-            fenced_time = (await UserState.get("fenced_time_map"))[at]
+            fenced_time = fenced_time_map[at]
         fenced_time_pass = int(time.time() - fenced_time)
         if fenced_time_pass < FENCED_PROTECTION:  # 5分钟保护期
             tips = [
@@ -197,11 +199,11 @@ async def _(session: Uninfo, msg: UniMsg):
         # 更新数据
         await UserState.update(
             "fence_time_map",
-            {**await UserState.get("fence_time_map"), uid: time.time()},
+            fence_time_map,
         )
         await UserState.update(
             "fenced_time_map",
-            {**await UserState.get("fenced_time_map"), at: time.time()},
+            fenced_time_map,
         )
         await niuniu_fencing.send(result, reply_message=True)
     except RuntimeError as e:

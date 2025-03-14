@@ -49,7 +49,4 @@ def get_prop_by_name(prop_name: str) -> PropModel | None:
     Returns:
         PropModel | None: 如果找到匹配的道具，返回该道具实例；否则返回 None
     """
-    for prop in GOODS:
-        if prop.name == prop_name:
-            return prop
-    return None
+    return next((prop for prop in GOODS if prop.name == prop_name), None)  
