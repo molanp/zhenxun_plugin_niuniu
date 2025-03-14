@@ -1,0 +1,89 @@
+glue_events:
+  normal:
+    weight: 60
+    positive_descriptions:
+      - "你嘿咻嘿咻一下，促进了牛牛发育，牛牛增加了{diff}cm了呢！🎉"
+      - "你打了个舒服痛快的🦶呐，牛牛增加了{diff}cm呢！💪"
+      - "哇哦！你的一🦶让牛牛变长了{diff}cm！👏"
+      - "你的牛牛感受到了你的热情，增长了{diff}cm！🔥"
+      - "你的一脚仿佛有魔力，牛牛增长了{diff}cm！✨"
+    no_change_descriptions:
+      - "你打了个🦶，但是什么变化也没有，好奇怪捏~🤷‍♂️"
+      - "你的牛牛刚开始变长了，可过了一会又回来了，什么变化也没有，好奇怪捏~🤷‍♀️"
+      - "你准备🦌的时候发现今天是疯狂星期四，先V我50!😄"
+      - "你的牛牛看起来很开心，但没有变化！😊"
+      - "你在打胶时，感觉这个世界似乎发生了什么变化🤔"
+    negative_descriptions:
+      - "哦吼！？看来你的牛牛凹进去了{diff_}cm呢！😱"
+      - "你突发恶疾！你的牛牛凹进去了{diff_}cm！😨"
+      - "笑死，你因为打🦶过度导致牛牛凹进去了{diff_}cm！🤣🤣🤣"
+      - "你的牛牛仿佛被你一🦶踢进了地缝，凹进去了{diff_}cm！🕳️"
+      - "你的一🦶用力过度了，牛牛凹进去了{diff_}cm！💥"
+      - "阿哦，你过度打🦶，牛牛缩短了{diff_}cm了呢！😢"
+      - "🦌的时候突然响起了届かない恋！你听了之后想起了自己的往事, 伤心之余发觉牛牛缩短了{diff_}cm。"
+      - "你的牛牛变长了很多，你很激动地继续打🦶，然后牛牛缩短了{diff_}cm呢！🤦‍♂️"
+      - "小打怡情，大打伤身，强打灰飞烟灭！你过度打🦶，牛牛缩短了{diff_}cm捏！💥"
+      - "你的牛牛看起来很受伤，缩短了{diff_}cm！🤕"
+      - "你的打🦶没效果，于是很气急败坏地继续打🦶，然后牛牛缩短了{diff_}cm呢！🤦‍♂️"
+      - "🦌太多次导致身体虚弱，牛牛长度减少了{diff_}cm!"
+    coefficient: 1.0
+    category: "growth"
+    buff:
+      duration: 300
+      effect: 1.2
+    next_event: "normal_boost"
+    rapid_effect:
+      positive_descriptions:
+        - "这么着急？牛牛只微微增长了{diff}cm...🤏"
+        - "bro你搞这么快只会适得其反！牛牛只增加{diff}cm！😰"
+      negative_descriptions:
+        - "这么着急？牛牛却减少了{diff}cm...😢"
+        - "bro你搞这么快只会适得其反！牛牛却减少了{diff}cm！😭"
+      coefficient: 0.1
+
+  normal_boost:
+    weight: 10
+    positive_descriptions:
+      - "上次打胶的效果还在！牛牛又增加了{diff}cm！🔥"
+    coefficient: 1.5
+    category: "growth"
+
+  shrinkage:
+    weight: 10
+    positive_descriptions:
+      - "由于你在换蛋期打胶，你的牛牛断掉了呢！当前长度{new_length}cm!🤯"
+      - "bro换蛋期就不要打胶了！你的牛牛萎缩了{diff}cm！💩"
+    coefficient: 0.5
+    category: "shrinkage"
+
+  arrested:
+    weight: 10
+    positive_descriptions:
+      - "打胶时被窗外的路人发现了，对方报警了，你被抓走了！关进小黑屋里{ban_time}s!"
+    ban_time: 180
+    category: "arrested"
+
+  special_boost:
+    weight: 5
+    positive_descriptions:
+      - "你收到了群主私发的女装，冲！！！牛牛长大了{diff}cm！👗"
+    coefficient: 1.2
+    category: "special"
+    buff:
+      duration: 600
+      effect: 1.5
+  rapid_penalty:
+    weight: 15
+    positive_descriptions:
+      - "这么着急？牛牛只微微增长了{diff}cm...🤏"
+      - "bro你搞这么快只会适得其反！牛牛只增加{diff}cm！😰"
+    coefficient: 0.1
+    category: "growth"
+
+  quick_growth:
+    weight: 20
+    positive_descriptions:
+      - "你快速打胶，牛牛增加了{diff}cm！💨"
+      - "牛牛还没冷却好！勉强增长{diff}cm！😖"
+    coefficient: 0.5
+    category: "growth"

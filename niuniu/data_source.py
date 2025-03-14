@@ -11,7 +11,7 @@ from zhenxun.utils.platform import PlatformUtils
 from .model import NiuNiuRecord, NiuNiuUser
 
 
-class NiuNiu:
+class NiuNiuQuick:
     @classmethod
     async def get_length(cls, uid: int | str) -> float | None:
         user = await NiuNiuUser.get_or_none(uid=uid).values("length")

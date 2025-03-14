@@ -1,6 +1,8 @@
 import random
 import time
 
+from zhenxun.plugins.niuniu.utils import UserState
+
 from .model import NiuNiuUser
 from .niuniu import NiuNiu
 
@@ -24,54 +26,29 @@ class Fencing:
         确定击剑比赛的结果。
 
         Args:
-            my_length (decimal): 我的当前长度
-            oppo_length (decimal): 对手的当前长度
+            my_length (float): 我的当前长度
+            oppo_length (float): 对手的当前长度
             at_qq (str): 被 @ 的人的 QQ 号码。
             my_qq (str): 我的 QQ 号码。
         """
         origin_my = my_length
         origin_oppo = oppo_length
-        # 定义损失和吞噬比例
-        loss_limit = 0.25
-        devour_limit = 0.27
 
-        # 生成一个随机数
-        probability = random.randint(1, 100)
+        # 计算击剑获胜概率
+        win_probability = await cls.calculate_win_probability(my_length, oppo_length)
 
-        # 根据不同情况执行不同的击剑逻辑
-        if oppo_length <= -100 and my_length > 0 and 10 < probability <= 20:
-            oppo_length *= 0.65 + min(abs(loss_limit * my_length), abs(1.5 * my_length))
-            my_length -= min(abs(loss_limit * my_length), abs(1.5 * my_length))
-            my_length = my_length * -1
-            result = (
-                f"对方身为魅魔诱惑了你,你同化成魅魔!当前长度{round(my_length, 2)}cm!"
-            )
-        elif oppo_length >= 100 and my_length > 0 and 10 < probability <= 20:
-            oppo_length *= 0.65 + min(
-                abs(devour_limit * my_length), abs(1.5 * my_length)
-            )
-            my_length -= min(abs(devour_limit * my_length), abs(1.5 * my_length))
-            result = (
-                f"对方以牛头人的荣誉摧毁了你的牛牛!当前长度{round(my_length, 2)}cm!"
-            )
-        elif my_length <= -100 and oppo_length > 0 and 10 < probability <= 20:
-            my_length *= 0.65 + min(
-                abs(loss_limit * oppo_length), abs(1.5 * oppo_length)
-            )
-            oppo_length -= min(abs(loss_limit * oppo_length), abs(1.5 * oppo_length))
-            result = f"你身为魅魔诱惑了对方,吞噬了对方部分长度!当前长度{round(my_length, 2)}cm!"  # noqa: E501
-        elif my_length >= 100 and oppo_length > 0 and 10 < probability <= 20:
-            my_length *= 0.65 + min(
-                abs(devour_limit * oppo_length), abs(1.5 * oppo_length)
-            )
-            oppo_length -= min(abs(devour_limit * oppo_length), abs(1.5 * oppo_length))
-            result = (
-                f"你以牛头人的荣誉摧毁了对方的牛牛!当前长度{round(my_length, 2)}cm!"
+        # 根据胜率决定胜负
+        result = random.choices(
+            ["win", "lose"], weights=[win_probability, 1 - win_probability], k=1
+        )[0]
+
+        if result == "win":
+            result, my_length, oppo_length = await cls.apply_skill(
+                my_length, oppo_length, True, my_qq
             )
         else:
-            # 通过击剑技巧来决定结果
-            result, my_length, oppo_length = await cls.determine_result_by_skill(
-                my_length, oppo_length
+            result, my_length, oppo_length = await cls.apply_skill(
+                my_length, oppo_length, False, at_qq
             )
 
         # 更新数据并返回结果
@@ -107,42 +84,18 @@ class Fencing:
         return max(adjusted_p_a, 0.01)
 
     @classmethod
-    async def determine_result_by_skill(cls, my_length, oppo_length):
-        """
-        根据击剑技巧决定结果。
-
-        Args:
-            my_length (decimal): 我的当前长度。
-            oppo_length (decimal): 对手的当前长度。
-
-        Returns:
-            str: 包含结果的字符串。
-        """
-        # 生成一个随机数
-        probability = random.randint(0, 100)
-
-        # 根据不同情况决定结果
-        if (
-            0
-            < probability
-            <= await cls.calculate_win_probability(my_length, oppo_length) * 100
-        ):
-            return await cls.apply_skill(my_length, oppo_length, True)
-        else:
-            return await cls.apply_skill(my_length, oppo_length, False)
-
-    @classmethod
-    async def apply_skill(cls, my, oppo, increase_length):
+    async def apply_skill(cls, my, oppo, increase_length, uid):
         """
         应用击剑技巧并生成结果字符串。
 
         Args:
-            my (decimal): 长度1。
-            oppo (decimal): 长度2。
-            increase_length (bool): my是否增加长度。
+            my (float): 长度1。
+            oppo (float): 长度2。
+            increase_length (bool): 是否增加长度。
+            uid (str): 用户 ID。
 
         Returns:
-            str: 包含结果的数组。
+            str: 包含结果的字符串。
         """
         base_change = min(abs(my), abs(oppo)) * 0.1  # 基于较小值计算变化量
         reduce = await cls.fence(base_change)  # 传入基础变化量
@@ -151,6 +104,12 @@ class Fencing:
         # 添加动态平衡系数
         balance_factor = 1 - abs(my - oppo) / 100  # 差距越大变化越小
         reduce *= max(0.3, balance_factor)
+
+        # 获取用户 Buff 效果
+        buff = (await UserState.get("buff_map")).get(uid, {})
+        if buff and buff.get("expire_time", 0) > time.time():
+            reduce *= buff.get("effect", 1)
+
         if increase_length:
             my += reduce
             oppo -= 0.8 * reduce
@@ -162,7 +121,10 @@ class Fencing:
                     ]
                 )
             else:
-                result = f"你以绝对的长度让对方屈服了呢!你的长度增加{round(reduce, 2)}cm,对方减少了{round(0.8 * reduce, 2)}cm!你当前长度为{round(my, 2)}cm!"  # noqa: E501
+                result = (
+                    f"你以绝对的长度让对方屈服了呢!你的长度增加{round(reduce, 2)}cm,"
+                    f"对方减少了{round(0.8 * reduce, 2)}cm!你当前长度为{round(my, 2)}cm!"
+                )
         else:
             my -= reduce
             oppo += 0.8 * reduce
@@ -175,7 +137,10 @@ class Fencing:
                     ]
                 )
             else:
-                result = f"对方以绝对的长度让你屈服了呢!你的长度减少{round(reduce, 2)}cm,当前长度{round(my, 2)}cm!"  # noqa: E501
+                result = (
+                    f"对方以绝对的长度让你屈服了呢!你的长度减少{round(reduce, 2)}cm,"
+                    f"当前长度{round(my, 2)}cm!"
+                )
         return result, my, oppo
 
     @classmethod

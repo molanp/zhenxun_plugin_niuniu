@@ -7,21 +7,14 @@ import time
 import aiofiles
 from arclet.alconna import Args
 from nonebot import get_driver, on_command
-from nonebot_plugin_alconna import (
-    Alconna,
-    At,
-    Image,
-    Match,
-    Text,
-    UniMsg,
-    on_alconna,
-)
+from nonebot_plugin_alconna import Alconna, At, Image, Match, Text, UniMsg, on_alconna
 from nonebot_plugin_htmlrender import template_to_pic
 from nonebot_plugin_uninfo import Uninfo
 from tortoise.exceptions import DoesNotExist
 
 from zhenxun.configs.path_config import DATA_PATH
 from zhenxun.models.user_console import UserConsole
+from zhenxun.plugins.niuniu.utils import UserState
 from zhenxun.utils.enum import GoldHandle
 from zhenxun.utils.message import MessageUtils
 from zhenxun.utils.platform import PlatformUtils
@@ -30,7 +23,6 @@ from .config import (
     FENCE_COOLDOWN,
     FENCED_PROTECTION,
     GLUE_COOLDOWN,
-    PLOCE_BAN,
     QUICK_GLUE_COOLDOWN,
     UNSUBSCRIBE_GOLD,
 )
@@ -38,6 +30,7 @@ from .database import Sqlite
 from .fence import Fencing
 from .model import NiuNiuUser
 from .niuniu import NiuNiu
+from .niuniu_goods.event_manager import process_glue_event
 
 niuniu_register = on_alconna(
     Alconna("注册牛牛"),
@@ -93,10 +86,6 @@ niuniu_my_record = on_alconna(
 )
 
 
-user_fence_time_map = {}
-user_fenced_time_map = {} 
-user_gluing_time_map = {}
-
 driver = get_driver()
 
 
@@ -150,11 +139,12 @@ async def _(session: Uninfo):
 
 @niuniu_fencing.handle()
 async def _(session: Uninfo, msg: UniMsg):
-    global user_fence_time_map
     at_list = [i.target for i in msg if isinstance(i, At)]
     uid = session.user.id
     with contextlib.suppress(KeyError):
-        time_pass = int(time.time() - user_fence_time_map[uid])
+        time_pass = int(
+            time.time() - (await UserState.get("fence_time_map")).get(uid, 0)
+        )
         if time_pass < FENCE_COOLDOWN:
             time_rest = FENCE_COOLDOWN - time_pass
             jj_refuse = [
@@ -186,11 +176,11 @@ async def _(session: Uninfo, msg: UniMsg):
         opponent_long = await NiuNiu.get_length(at)
         if not opponent_long:
             raise RuntimeError("对方还没有牛牛呢！不能击剑！")
-        # 新增被击剑者冷却检查
-        if user_fenced_time_map.get(at) is None:
+        # 被击剑者冷却检查
+        if (await UserState.get("fenced_time_map")).get(at) is None:
             fenced_time = await NiuNiu.last_fenced_time(at)
         else:
-            fenced_time = user_fenced_time_map[at]
+            fenced_time = (await UserState.get("fenced_time_map"))[at]
         fenced_time_pass = int(time.time() - fenced_time)
         if fenced_time_pass < FENCED_PROTECTION:  # 5分钟保护期
             tips = [
@@ -200,9 +190,19 @@ async def _(session: Uninfo, msg: UniMsg):
             ]
             await niuniu_fencing.send(random.choice(tips), reply_message=True)
             return
+
+        # 处理击剑逻辑
         result = await Fencing.fencing(my_long, opponent_long, at, uid)
-        user_fence_time_map[uid] = time.time()
-        user_fenced_time_map[at] = time.time()  # 新增被击剑者冷却
+
+        # 更新数据
+        await UserState.update(
+            "fence_time_map",
+            {**await UserState.get("fence_time_map"), uid: time.time()},
+        )
+        await UserState.update(
+            "fenced_time_map",
+            {**await UserState.get("fenced_time_map"), at: time.time()},
+        )
         await niuniu_fencing.send(result, reply_message=True)
     except RuntimeError as e:
         await niuniu_fencing.send(str(e), reply_message=True)
@@ -227,22 +227,17 @@ async def _(session: Uninfo):
     rank = await NiuNiuUser.filter(length__gt=current_user.length).count() + 1
 
     # 构造结果数据
-    user = {
-        "uid": current_user.uid,
-        "length": current_user.length,
-        "rank": rank
-    }
+    user = {"uid": current_user.uid, "length": current_user.length, "rank": rank}
     avatar = await PlatformUtils.get_user_avatar(str(uid), "qq", session.self_id)
     avatar = "" if avatar is None else base64.b64encode(avatar).decode("utf-8")
-    
+
     result = {
-         "avatar": f"data:image/png;base64,{avatar}",
-         "name": session.user.name,
-         "rank": user["rank"],
-         "my_length": user["length"],
-         "difference": "不适用",
-         "latest_gluing_time": await NiuNiu.latest_gluing_time(uid),
-         "comment": await NiuNiu.comment(user["length"]),
+        "avatar": f"data:image/png;base64,{avatar}",
+        "name": session.user.name,
+        "rank": user["rank"],
+        "my_length": user["length"],
+        "latest_gluing_time": await NiuNiu.latest_gluing_time(uid),
+        "comment": await NiuNiu.comment(user["length"]),
     }
     template_dir = Path(__file__).resolve().parent / "templates"
     pic = await template_to_pic(
@@ -305,7 +300,6 @@ async def _(session: Uninfo, match: Match[int]):
 
 @niuniu_hit_glue.handle()
 async def hit_glue(session: Uninfo):
-    global user_gluing_time_map
     uid = session.user.id
     origin_length = await NiuNiu.get_length(uid)
     if not origin_length:
@@ -321,10 +315,13 @@ async def hit_glue(session: Uninfo):
             reply_to=True,
         )
         return
-    new_length = origin_length
+
+    # 检查冷却时间
     is_rapid_glue = False
     with contextlib.suppress(KeyError):
-        time_pass = abs(int(time.time() - user_gluing_time_map[uid]))
+        time_pass = abs(
+            int(time.time() - (await UserState.get("gluing_time_map")).get(uid, 0))
+        )
         if time_pass < QUICK_GLUE_COOLDOWN:
             is_rapid_glue = True
         if time_pass < GLUE_COOLDOWN:
@@ -337,101 +334,23 @@ async def hit_glue(session: Uninfo):
             ]
             await niuniu_hit_glue.send(random.choice(glue_refuse), reply_to=True)
             return
-    user_gluing_time_map[uid] = time.time()
-    if is_rapid_glue:
-        prob_pool = [1, 1, 0, 0, 0, 0, -1, -1, -1, -1, 3, 2, 2, 2]
-    else:
-        prob_pool = [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, -1, -1, 3, 2, 2, 4]
 
-    prob = random.choice(prob_pool)
-    diff = 0
-    if is_rapid_glue and prob == 1:
-        new_length, diff = await NiuNiu.gluing(origin_length, 0.1)
-        result = random.choice(
-            [
-                f"这么着急？牛牛只微微增长了{diff}cm...🤏",
-                f"bro你搞这么快只会适得其反！牛牛只增加{diff}cm！😰",
-                f"牛牛还没冷却好！勉强增长{diff}cm！😖",
-            ]
-        )
-        await NiuNiu.update_length(uid, new_length)
-        await NiuNiu.record_length(uid, origin_length, new_length, "gluing")
-        await niuniu_hit_glue.send(Text(result), reply_to=True)
-        return
-    if prob == 1:
-        new_length, diff = await NiuNiu.gluing(origin_length)
-    elif prob == 3 and origin_length > 0:
-        new_length = round(origin_length - (origin_length / 2), 2)
-        result = random.choice(
-            [
-                f"由于你在换蛋期打胶，你的牛牛断掉了呢！当前长度{new_length}cm!🤯",
-                f"bro换蛋期就不要打胶了！你的牛牛萎缩了{abs(round(origin_length / 2, 2))}cm！💩",
-            ]
-        )
-        await NiuNiu.update_length(uid, new_length)
-        await NiuNiu.record_length(uid, origin_length, new_length, "gluing")
-        await niuniu_hit_glue.send(Text(result), reply_to=True)
-        return
-    elif prob == 2:
-        result = f"打胶时被窗外的路人发现了，对方报警了，你被抓走了！关进小黑屋里{PLOCE_BAN}s!"  # noqa: E501
-        user_gluing_time_map[uid] = time.time() + PLOCE_BAN
-        await niuniu_hit_glue.send(Text(result), reply_to=True)
-        return
-    elif prob == 4:
-        new_length, diff = await NiuNiu.gluing(origin_length, 1.2)
-        result = f"你收到了群主私发的女装，冲！！！牛牛长大了{diff}cm！👗"
-        await NiuNiu.update_length(uid, new_length)
-        await NiuNiu.record_length(uid, origin_length, new_length, "gluing")
-        await niuniu_hit_glue.send(Text(result), reply_to=True)
-        return
-    if diff > 0:
-        result = random.choice(
-            [
-                f"你嘿咻嘿咻一下，促进了牛牛发育，牛牛增加了{diff}cm了呢！🎉",
-                f"你打了个舒服痛快的🦶呐，牛牛增加了{diff}cm呢！💪",
-                f"哇哦！你的一🦶让牛牛变长了{diff}cm！👏",
-                f"你的牛牛感受到了你的热情，增长了{diff}cm！🔥",
-                f"你的一脚仿佛有魔力，牛牛增长了{diff}cm！✨",
-            ]
-        )
-    elif diff == 0:
-        result = random.choice(
-            [
-                "你打了个🦶，但是什么变化也没有，好奇怪捏~🤷‍♂️",
-                "你的牛牛刚开始变长了，可过了一会又回来了，什么变化也没有，好奇怪捏~🤷‍♀️",
-                "你准备🦌的时候发现今天是疯狂星期四，先V我50!😄",
-                "你的牛牛看起来很开心，但没有变化！😊",
-                "你在打胶时，感觉这个世界似乎发生了什么变化🤔",
-            ]
-        )
-    else:
-        diff_ = abs(diff)
-        if new_length < 0:
-            result = random.choice(
-                [
-                    f"哦吼！？看来你的牛牛凹进去了{diff_}cm呢！😱",
-                    f"你突发恶疾！你的牛牛凹进去了{diff_}cm！😨",
-                    f"笑死，你因为打🦶过度导致牛牛凹进去了{diff_}cm！🤣🤣🤣",
-                    f"你的牛牛仿佛被你一🦶踢进了地缝，凹进去了{diff_}cm！🕳️",
-                    f"你的一🦶用力过度了，牛牛凹进去了{diff_}cm！💥",
-                ]
-            )
-        else:
-            result = random.choice(
-                [
-                    f"阿哦，你过度打🦶，牛牛缩短了{diff_}cm了呢！😢",
-                    f"🦌的时候突然响起了届かない恋！你听了之后想起了自己的往事, 伤心之余发觉牛牛缩短了{diff_}cm。"  # noqa: E501
-                    f"你的牛牛变长了很多，你很激动地继续打🦶，然后牛牛缩短了{diff_}cm呢！🤦‍♂️",
-                    f"小打怡情，大打伤身，强打灰飞烟灭！你过度打🦶，牛牛缩短了{diff_}cm捏！💥",
-                    f"你的牛牛看起来很受伤，缩短了{diff_}cm！🤕",
-                    f"你的打🦶没效果，于是很气急败坏地继续打🦶，然后牛牛缩短了{diff_}cm呢！🤦‍♂️",
-                    f"🦌太多次导致身体虚弱，牛牛长度减少了{diff_}cm!",
-                ]
-            )
+    # 更新冷却时间
+    await UserState.update(
+        "gluing_time_map",
+        {**await UserState.get("gluing_time_map"), uid: time.time()},
+    )
 
+    # 处理事件
+    result, new_length, diff = await process_glue_event(
+        uid, origin_length, is_rapid_glue
+    )
+
+    # 更新数据
     await NiuNiu.update_length(uid, new_length)
     await NiuNiu.record_length(uid, origin_length, new_length, "gluing")
 
+    # 发送结果
     await niuniu_hit_glue.send(Text(result), reply_to=True)
 
 
