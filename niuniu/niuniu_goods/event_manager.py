@@ -110,11 +110,11 @@ async def process_glue_event(
             await apply_buff(uid, event)
 
         # 处理连续子事件
-        if event.next_event and event.next_event in events:
-            result, new_length, diff = await process_glue_event(
-                uid, new_length, is_rapid
-            )
-            return result, new_length, diff
+        # if event.next_event and event.next_event in events:
+        #     result, new_length, diff = await process_glue_event(
+        #         uid, new_length, is_rapid
+        #     )
+        #     return result, new_length, diff
 
         desc_template = choose_description(
             diff,
