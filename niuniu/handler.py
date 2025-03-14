@@ -365,7 +365,7 @@ async def hit_glue(session: Uninfo):
         result = random.choice(
             [
                 f"由于你在换蛋期打胶，你的牛牛断掉了呢！当前长度{new_length}cm!🤯",
-                f"bro换蛋期就不要打胶了！你的牛牛萎缩了{abs(diff)}cm！💩",
+                f"bro换蛋期就不要打胶了！你的牛牛萎缩了{abs(round(origin_length / 2, 2))}cm！💩",
             ]
         )
         await NiuNiu.update_length(uid, new_length)
