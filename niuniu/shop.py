@@ -16,6 +16,10 @@ def create_handler(good):
     else:
         async def handler(message: UniMsg):
             at_list = [i.target for i in message if isinstance(i, At)]
+            if len(at_list) > 1:
+                return "你的蒙汗药只能对一位玩家使用哦!"
+            if not at_list:
+                return "不能对自己使用哦!请@一位玩家"
             uid = at_list[0]
             await UserState.update(
                 "gluing_time_map",
