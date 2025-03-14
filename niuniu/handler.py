@@ -141,12 +141,10 @@ async def _(session: Uninfo):
 async def _(session: Uninfo, msg: UniMsg):
     at_list = [i.target for i in msg if isinstance(i, At)]
     uid = session.user.id
-    fence_time_map = await UserState.get("fence_time_map")  
-    fenced_time_map = await UserState.get("fenced_time_map")  
+    fence_time_map = await UserState.get("fence_time_map")
+    fenced_time_map = await UserState.get("fenced_time_map")
     with contextlib.suppress(KeyError):
-        time_pass = int(
-            time.time() - fence_time_map.get(uid, 0)
-        )
+        time_pass = int(time.time() - fence_time_map.get(uid, 0))
         if time_pass < FENCE_COOLDOWN:
             time_rest = FENCE_COOLDOWN - time_pass
             jj_refuse = [

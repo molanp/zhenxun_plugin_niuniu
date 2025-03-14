@@ -51,7 +51,7 @@ async def process_glue_event(
         # 创建事件的深拷贝副本
         events = {k: copy.deepcopy(v) for k, v in original_events.items()}
     except Exception as e:
-        raise RuntimeError(f"Failed to load events: {e}") from e 
+        raise RuntimeError(f"Failed to load events: {e}") from e
 
     await adjust_glue_effects(uid, events)
 

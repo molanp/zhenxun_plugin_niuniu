@@ -21,8 +21,8 @@ GOODS = [
         icon="yuban.png",
         des="会让人变得香香软软的东西，使用后自己下次打胶变短概率翻倍，遇到负面效果概率翻倍，持续20分钟",
         glue_effect=0.3,
-        glue_negative_weight=1.5
-    )
+        glue_negative_weight=1.5,
+    ),
 ]
 
 
@@ -49,4 +49,4 @@ def get_prop_by_name(prop_name: str) -> PropModel | None:
     Returns:
         PropModel | None: 如果找到匹配的道具，返回该道具实例；否则返回 None
     """
-    return next((prop for prop in GOODS if prop.name == prop_name), None)  
+    return next((prop for prop in GOODS if prop.name == prop_name), None)

@@ -7,9 +7,10 @@ from zhenxun.plugins.niuniu.niuniu_goods.goods import GOODS
 from zhenxun.plugins.niuniu.utils import UserState
 from zhenxun.utils.decorator.shop import shop_register
 
+
 def create_handler(good):
     if good.name != "蒙汗药":
-        async def handler(user_id: str):
+        async def handler(user_id: str): # type: ignore
             await use_prop(user_id, good.name)
         return handler
     else:
@@ -29,6 +30,7 @@ for good in GOODS:
         des=good.des,
         load_status=True,
         icon=good.icon,
+        partition="牛牛商店",
     )(create_handler(good))
 
     if good.name == "蒙汗药":
