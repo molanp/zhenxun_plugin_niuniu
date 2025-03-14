@@ -84,7 +84,7 @@ async def process_glue_event(
             rapid_effect.no_change_descriptions,
         )
         result = desc_template.format(
-            diff=round(diff, 2),
+            diff=round(abs(diff), 2),
             new_length=round(new_length, 2),
             ban_time=rapid_effect.ban_time,
         )
@@ -119,7 +119,7 @@ async def process_glue_event(
             event.no_change_descriptions,
         )
         result = desc_template.format(
-            diff=round(diff, 2),
+            diff=round(abs(diff), 2),
             new_length=round(new_length, 2),
             ban_time=event.ban_time,
         )

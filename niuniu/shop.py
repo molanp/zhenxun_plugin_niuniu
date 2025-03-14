@@ -1,4 +1,3 @@
-import random
 import time
 
 from nonebot_plugin_alconna import At, UniMsg
