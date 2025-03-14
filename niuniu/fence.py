@@ -33,6 +33,15 @@ class Fencing:
         """
         origin_my = my_length
         origin_oppo = oppo_length
+        # 获取用户当前道具的击剑加成
+        user_props = await UserState.get("user_props")
+        my_prop_info = user_props.get(my_qq, {})
+        fencing_weight = my_prop_info.get("prop", {}).get("fencing_weight", 1.0)
+
+        # 传递到胜率计算
+        win_probability = await cls.calculate_win_probability(
+            my_length, oppo_length, fencing_weight
+        )
 
         # 计算击剑获胜概率
         win_probability = await cls.calculate_win_probability(my_length, oppo_length)
@@ -65,9 +74,9 @@ class Fencing:
         return result
 
     @classmethod
-    async def calculate_win_probability(cls, height_a, height_b):
+    async def calculate_win_probability(cls, height_a, height_b, fencing_weight=1.0):
         # 选手 A 的初始胜率为 85%
-        p_a = 0.85
+        p_a = 0.85 * fencing_weight
         # 计算长度比例
         height_ratio = max(height_a, height_b) / min(height_a, height_b)
 

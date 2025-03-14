@@ -30,7 +30,7 @@ from .database import Sqlite
 from .fence import Fencing
 from .model import NiuNiuUser
 from .niuniu import NiuNiu
-from .niuniu_goods.event_manager import process_glue_event
+from .niuniu_goods.event_manager import get_current_prop, process_glue_event
 
 niuniu_register = on_alconna(
     Alconna("注册牛牛"),
@@ -304,6 +304,7 @@ async def _(session: Uninfo, match: Match[int]):
 async def hit_glue(session: Uninfo):
     uid = session.user.id
     origin_length = await NiuNiu.get_length(uid)
+    current_prop = await get_current_prop(uid)
     if not origin_length:
         await niuniu_hit_glue.send(
             Text(
@@ -345,7 +346,7 @@ async def hit_glue(session: Uninfo):
 
     # 处理事件
     result, new_length, diff = await process_glue_event(
-        uid, origin_length, is_rapid_glue
+        uid, origin_length, is_rapid_glue, current_prop
     )
 
     # 更新数据
@@ -382,6 +383,7 @@ async def my_record(session: Uninfo, match: Match[int]):
                     "register": "📝",
                     "gluing": "💦",
                     "unsubscribe": "❌",
+                    "drug": "💊",
                 }.get(record["action"], record["action"]),
                 "action": {
                     "fencing": "击剑",
@@ -389,6 +391,7 @@ async def my_record(session: Uninfo, match: Match[int]):
                     "gluing": "打胶",
                     "register": "注册牛牛",
                     "unsubscribe": "注销牛牛",
+                    "drug": "使用药水",
                 }.get(record["action"], record["action"]),
                 "time": record["time"],
                 "origin": record["origin_length"],

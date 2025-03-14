@@ -6,7 +6,7 @@ GOODS = [
         price=200,
         des="神秘小药丸，下次抽到击剑胜率的概率翻倍，持续10分钟",
         icon="weige.png",
-        duration=600,
+        duration=60*10,
         fencing_weight=1.5,
     ),
     PropModel(
@@ -19,10 +19,17 @@ GOODS = [
         name="鱼板",
         price=300,
         icon="yuban.png",
+        duration=60*20,
         des="会让人变得香香软软的东西，使用后自己下次打胶变短概率翻倍，遇到负面效果概率翻倍，持续20分钟",
         glue_effect=0.3,
         glue_negative_weight=1.5,
     ),
+    PropModel(
+        name="美波里的神奇药水",
+        price=500,
+        des="谁知道会有什么效果呢",
+        icon="meiboli.png",
+    )
 ]
 
 

@@ -65,7 +65,7 @@ class GlueEvent(BaseModel):
         affected_by_props (bool): 是否受到道具影响
     """
 
-    weight: int
+    weight: float
     """事件权重"""
     positive_descriptions: list[str]
     """事件增加文本"""

@@ -1,9 +1,8 @@
-import copy
 import random
 import time
 from typing import Any
 
-from ..config_loader import load_events
+from ..config_loader import GlueEvent, PropModel, load_events
 from ..niuniu import NiuNiu
 from ..utils import UserState
 from .goods import get_prop_by_name
@@ -43,17 +42,14 @@ def choose_description(
 
 
 async def process_glue_event(
-    uid: str, origin_length: float, is_rapid: bool
+    uid: str,
+    origin_length: float,
+    is_rapid: bool,
+    current_prop: PropModel | None,
 ) -> tuple[str, float, float]:
     """处理打胶事件"""
-    try:
-        original_events = load_events()  # 加载原始事件配置
-        # 创建事件的深拷贝副本
-        events = {k: copy.deepcopy(v) for k, v in original_events.items()}
-    except Exception as e:
-        raise RuntimeError(f"Failed to load events: {e}") from e
 
-    await adjust_glue_effects(uid, events)
+    events = await adjust_glue_effects(uid, load_events(), current_prop)
 
     # 检查是否有 Buff 效果
     buff_map = await UserState.get("buff_map")
@@ -155,13 +151,13 @@ async def use_prop(uid: str, prop_name: str) -> tuple[str, int, int]:
     )
 
 
-async def adjust_glue_effects(uid: str, events: dict[str, Any]) -> None:
-    """根据用户的道具调整打胶事件效果和负面事件概率"""
-    prop_data = (await UserState.get("prop_map")).get(uid)
-    if prop_data and prop_data.get("expire_time", 0) > time.time():
-        prop = prop_data["prop"]
-        glue_effect = prop.glue_effect
-        glue_negative_weight = prop.glue_negative_weight
+async def adjust_glue_effects(
+    uid: str, events: dict[str, GlueEvent], current_prop: PropModel | None
+) -> dict[str, GlueEvent]:
+    if current_prop:
+        glue_effect = current_prop.glue_effect
+        glue_negative_weight = current_prop.glue_negative_weight
+
         for event in events.values():
             if event.affected_by_props:
                 if event.coefficient:
@@ -170,3 +166,16 @@ async def adjust_glue_effects(uid: str, events: dict[str, Any]) -> None:
                     event.effect *= glue_effect
                 if event.category in ["shrinkage", "arrested"]:
                     event.weight *= glue_negative_weight
+    return events
+
+
+async def get_current_prop(uid: str) -> PropModel | None:
+    user_props = await UserState.get("prop_map")
+    prop_info = user_props.get(uid, {})
+    if prop_info.get("expire_time", 0) > time.time():
+        return prop_info.get("prop")
+    # 清除过期道具
+    await UserState.update(
+        "prop_map", {k: v for k, v in user_props.items() if k != uid}
+    )
+    return None
