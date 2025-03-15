@@ -53,7 +53,7 @@ glue_events:
     positive_descriptions:
       - "由于你在换蛋期打胶，你的牛牛断掉了呢！当前长度{new_length}cm!🤯"
       - "bro换蛋期就不要打胶了！你的牛牛萎缩了{diff}cm！💩"
-    coefficient: 0.5
+    effect: 0.5
     category: "shrinkage"
 
   arrested:
