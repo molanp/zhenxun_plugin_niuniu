@@ -30,7 +30,7 @@ glue_events:
     category: "growth"
     buff:
       duration: 300
-      effect: 1.2
+      effect: 0.9
     # next_event: "normal_boost"
     rapid_effect:
       positive_descriptions:
@@ -40,6 +40,7 @@ glue_events:
         - "这么着急？牛牛却减少了{diff}cm...😢"
         - "bro你搞这么快只会适得其反！牛牛却减少了{diff}cm！😭"
       coefficient: 0.1
+      effect: 0.9
 
   # normal_boost:
   #   weight: 10
@@ -67,7 +68,7 @@ glue_events:
     weight: 5
     positive_descriptions:
       - "你收到了群主私发的女装，冲！！！牛牛长大了{diff}cm！👗"
-    coefficient: 1.2
+    coefficient: 1.1
     category: "special"
     buff:
       duration: 600
@@ -78,6 +79,7 @@ glue_events:
       - "这么着急？牛牛只微微增长了{diff}cm...🤏"
       - "bro你搞这么快只会适得其反！牛牛只增加{diff}cm！😰"
     coefficient: 0.1
+    effect: 0.9
     category: "growth"
 
   quick_growth:
