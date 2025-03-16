@@ -30,7 +30,7 @@ glue_events:
     category: "growth"
     buff:
       duration: 300
-      effect: 0.9
+      effect: 0.8
     # next_event: "normal_boost"
     rapid_effect:
       positive_descriptions:
@@ -39,7 +39,6 @@ glue_events:
       negative_descriptions:
         - "这么着急？牛牛却减少了{diff}cm...😢"
         - "bro你搞这么快只会适得其反！牛牛却减少了{diff}cm！😭"
-      coefficient: 0.1
       effect: 0.9
 
   # normal_boost:
@@ -72,20 +71,14 @@ glue_events:
     category: "special"
     buff:
       duration: 600
-      effect: 1.5
+      effect: 1.1
   rapid_penalty:
     weight: 15
     positive_descriptions:
       - "这么着急？牛牛只微微增长了{diff}cm...🤏"
       - "bro你搞这么快只会适得其反！牛牛只增加{diff}cm！😰"
-    coefficient: 0.1
+    negative_descriptions:
+      - "这么着急？牛牛却减少了{diff}cm...😢"
+      - "bro你搞这么快只会适得其反！牛牛减少了{diff}cm！😭"
     effect: 0.9
-    category: "growth"
-
-  quick_growth:
-    weight: 20
-    positive_descriptions:
-      - "你快速打胶，牛牛增加了{diff}cm！💨"
-      - "牛牛还没冷却好！勉强增长{diff}cm！😖"
-    coefficient: 0.5
     category: "growth"
