@@ -118,7 +118,7 @@ async def _(session: Uninfo):
 async def _(session: Uninfo):
     uid = str(session.user.id)
     length = await NiuNiu.get_length(uid)
-    if not length:
+    if length is None:
         await niuniu_unsubscribe.send(
             Text("你还没有牛牛呢！\n请发送'注册牛牛'领取你的牛牛!"), reply_to=True
         )
@@ -160,7 +160,7 @@ async def _(session: Uninfo, msg: UniMsg):
         return
     my_long = await NiuNiu.get_length(uid)
     try:
-        if not my_long:
+        if my_long is None:
             raise RuntimeError(
                 "你还没有牛牛呢！不能击剑！\n请发送'注册牛牛'领取你的牛牛!"
             )
@@ -174,7 +174,7 @@ async def _(session: Uninfo, msg: UniMsg):
         if at == uid:
             raise RuntimeError("不能和自己击剑哦！")
         opponent_long = await NiuNiu.get_length(at)
-        if not opponent_long:
+        if opponent_long is None:
             raise RuntimeError("对方还没有牛牛呢！不能击剑！")
         # 被击剑者冷却检查
         if fenced_time_map.get(at) is None:
@@ -213,7 +213,7 @@ async def _(session: Uninfo, msg: UniMsg):
 @niuniu_my.handle()
 async def _(session: Uninfo):
     uid = int(session.user.id)
-    if not await NiuNiu.get_length(uid):
+    if await NiuNiu.get_length(uid) is None:
         await niuniu_my.send(
             Text("你还没有牛牛呢！\n请发送'注册牛牛'领取你的牛牛!"), reply_to=True
         )
@@ -305,7 +305,7 @@ async def hit_glue(session: Uninfo):
     uid = session.user.id
     origin_length = await NiuNiu.get_length(uid)
     current_prop = await get_current_prop(uid)
-    if not origin_length:
+    if origin_length is None:
         await niuniu_hit_glue.send(
             Text(
                 random.choice(
@@ -415,3 +415,4 @@ async def my_record(session: Uninfo, match: Match[int]):
         templates=result,
     )
     await niuniu_my_record.send(Image(raw=pic), reply_to=True)
+
