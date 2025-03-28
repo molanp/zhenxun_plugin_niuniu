@@ -90,7 +90,7 @@ class Fencing:
         adjusted_p_a = p_a - reduction
 
         # 返回调整后的胜率
-        return max(adjusted_p_a, 0.01)
+        return max(adjusted_p_a, 0.10)
 
     @classmethod
     async def apply_skill(cls, my, oppo, increase_length, uid):

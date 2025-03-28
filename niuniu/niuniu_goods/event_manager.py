@@ -30,15 +30,15 @@ def choose_description(
     positive_descs: list[str] | None,
     negative_descs: list[str] | None,
     no_change_descs: list[str] | None,
-) -> str:
+) -> tuple[str, bool]:
     """选择随机描述"""
     if diff > 0 and positive_descs:
-        return random.choice(positive_descs)
+        return random.choice(positive_descs), False
     elif diff < 0 and negative_descs:
-        return random.choice(negative_descs)
+        return random.choice(negative_descs), False
     elif diff == 0 and no_change_descs:
-        return random.choice(no_change_descs)
-    return random.choice(positive_descs or negative_descs or ["无描述"])
+        return random.choice(no_change_descs), False
+    return random.choice(positive_descs or negative_descs or ["无描述"]), True
 
 
 async def process_glue_event(
@@ -77,14 +77,14 @@ async def process_glue_event(
             new_length = origin_length
             diff = 0
 
-        desc_template = choose_description(
+        desc_template, no_abs = choose_description(
             diff,
             rapid_effect.positive_descriptions,
             rapid_effect.negative_descriptions,
             rapid_effect.no_change_descriptions,
         )
         result = desc_template.format(
-            diff=round(abs(diff), 2),
+            diff=round(diff if no_abs else abs(diff), 2),
             new_length=round(new_length, 2),
             ban_time=rapid_effect.ban_time,
         )
@@ -92,6 +92,8 @@ async def process_glue_event(
         # 处理普通事件逻辑
         if event.category in ["growth", "special"]:
             new_length, diff = await NiuNiu.gluing(origin_length, event.coefficient)
+        elif event.category == "reduce":
+            new_length, diff = await NiuNiu.gluing(origin_length, reduce=True)
         elif event.category == "shrinkage":
             new_length = round(origin_length * event.effect, 2)
             diff = new_length - origin_length

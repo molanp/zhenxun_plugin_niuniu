@@ -5,8 +5,8 @@ glue_events:
       - "你嘿咻嘿咻一下，促进了牛牛发育，牛牛增加了{diff}cm了呢！🎉"
       - "你打了个舒服痛快的🦶呐，牛牛增加了{diff}cm呢！💪"
       - "哇哦！你的一🦶让牛牛变长了{diff}cm！👏"
-      - "你的牛牛感受到了你的热情，增长了{diff}cm！🔥"
-      - "你的一脚仿佛有魔力，牛牛增长了{diff}cm！✨"
+      - "你的牛牛感受到了你的热情，增加了{diff}cm！🔥"
+      - "你的一脚仿佛有魔力，牛牛增加了{diff}cm！✨"
     no_change_descriptions:
       - "你打了个🦶，但是什么变化也没有，好奇怪捏~🤷‍♂️"
       - "你的牛牛刚开始变长了，可过了一会又回来了，什么变化也没有，好奇怪捏~🤷‍♀️"
@@ -78,7 +78,6 @@ glue_events:
       - "这么着急？牛牛只微微增长了{diff}cm...🤏"
       - "bro你搞这么快只会适得其反！牛牛只增加{diff}cm！😰"
     negative_descriptions:
-      - "这么着急？牛牛却减少了{diff}cm...😢"
+      - "这么着急？牛牛减少了{diff}cm...😢"
       - "bro你搞这么快只会适得其反！牛牛减少了{diff}cm！😭"
-    effect: 0.9
-    category: "growth"
+    category: "reduce"

@@ -114,7 +114,7 @@ class NiuNiu:
 
     @classmethod
     async def gluing(
-        cls, origin_length: float, discount: float = 1
+        cls, origin_length: float, discount: float = 1, reduce: bool = False
     ) -> tuple[float, float]:
         result = await cls.get_nearest_lengths(origin_length)
         if result[0] != 0 and result[1] != 0:
@@ -130,6 +130,8 @@ class NiuNiu:
             diff = prob * 0.1 * origin_length * -1
         else:
             diff = prob * 0.1 * origin_length
+        if reduce:
+            diff = diff * -1
         raw_new_length = origin_length + diff * discount
         new_length = await cls.apply_decay(raw_new_length)
         return round(new_length, 2), round(new_length - origin_length, 2)
