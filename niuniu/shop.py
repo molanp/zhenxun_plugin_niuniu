@@ -1,7 +1,5 @@
 import time
 
-from nonebot_plugin_alconna import At, UniMsg
-
 from zhenxun.plugins.niuniu.niuniu import NiuNiu
 from zhenxun.plugins.niuniu.niuniu_goods.event_manager import use_prop
 from zhenxun.plugins.niuniu.niuniu_goods.goods import GOODS
@@ -12,15 +10,14 @@ from zhenxun.utils.decorator.shop import NotMeetUseConditionsException, shop_reg
 def create_handler(good):
     if good.name == "蒙汗药":
 
-        async def handler(user_id: str, message: UniMsg): # type: ignore
-            at_list = [i.target for i in message if isinstance(i, At)]
-            if len(at_list) > 1:
+        async def handler(user_id: str, at_users: list[str]): # type: ignore
+            if len(at_users) > 1:
                 raise NotMeetUseConditionsException("你的蒙汗药只能对一位玩家使用哦!")
-            if not at_list:
+            if not at_users:
+                raise NotMeetUseConditionsException("@人了吗？你要对你自己使用吗？")
+            if at_users[0] == user_id:
                 raise NotMeetUseConditionsException("不能对自己使用哦!请@一位玩家")
-            if at_list[0] == user_id:
-                raise NotMeetUseConditionsException("不能对自己使用哦!请@一位玩家")
-            uid = at_list[0]
+            uid = at_users[0]
             await UserState.update(
                 "gluing_time_map",
                 {**await UserState.get("gluing_time_map"), uid: time.time() + 300},
@@ -52,13 +49,3 @@ for good in GOODS:
         icon=good.icon,
         partition="牛牛商店",
     )(create_handler(good))
-
-    if good.name == "蒙汗药":
-
-        @shop_register.before_handle(name=good.name)
-        async def before_handle(message: UniMsg):
-            at_list = [i.target for i in message if isinstance(i, At)]
-            if len(at_list) > 1:
-                raise NotMeetUseConditionsException("你的蒙汗药只能对一位玩家使用哦!")
-            if not at_list:
-                raise NotMeetUseConditionsException("不能对自己使用哦!请@一位玩家")
