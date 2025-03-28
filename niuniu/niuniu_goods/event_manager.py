@@ -35,10 +35,10 @@ def choose_description(
     if diff > 0 and positive_descs:
         return random.choice(positive_descs), False
     elif diff < 0 and negative_descs:
-        return random.choice(negative_descs), False
+        return random.choice(negative_descs), True
     elif diff == 0 and no_change_descs:
         return random.choice(no_change_descs), False
-    return random.choice(positive_descs or negative_descs or ["无描述"]), True
+    return random.choice(positive_descs or negative_descs or ["无描述"]), False
 
 
 async def process_glue_event(
@@ -77,14 +77,14 @@ async def process_glue_event(
             new_length = origin_length
             diff = 0
 
-        desc_template, no_abs = choose_description(
+        desc_template, need_abs = choose_description(
             diff,
             rapid_effect.positive_descriptions,
             rapid_effect.negative_descriptions,
             rapid_effect.no_change_descriptions,
         )
         result = desc_template.format(
-            diff=round(diff if no_abs else abs(diff), 2),
+            diff=round(abs(diff) if need_abs else diff, 2),
             new_length=round(new_length, 2),
             ban_time=rapid_effect.ban_time,
         )
