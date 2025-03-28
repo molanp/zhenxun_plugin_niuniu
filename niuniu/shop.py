@@ -4,6 +4,7 @@ from zhenxun.plugins.niuniu.niuniu import NiuNiu
 from zhenxun.plugins.niuniu.niuniu_goods.event_manager import use_prop
 from zhenxun.plugins.niuniu.niuniu_goods.goods import GOODS
 from zhenxun.plugins.niuniu.utils import UserState
+from zhenxun.services.log import logger
 from zhenxun.utils.decorator.shop import NotMeetUseConditionsException, shop_register
 
 
@@ -18,6 +19,7 @@ def create_handler(good):
             if at_users[0] == user_id:
                 raise NotMeetUseConditionsException("不能对自己使用哦!请@一位玩家")
             uid = at_users[0]
+            logger.info(f"{uid} 被 {user_id} 使用了蒙汗药")
             await UserState.update(
                 "gluing_time_map",
                 {**await UserState.get("gluing_time_map"), uid: time.time() + 300},
