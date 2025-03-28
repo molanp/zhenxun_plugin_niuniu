@@ -14,7 +14,7 @@ def create_handler(good):
             if len(at_users) > 1:
                 raise NotMeetUseConditionsException("你的蒙汗药只能对一位玩家使用哦!")
             if not at_users:
-                raise NotMeetUseConditionsException("不能对自己使用哦!请@一位玩家")
+                raise NotMeetUseConditionsException("@人了吗？你要对你自己使用吗？")
             if at_users[0] == user_id:
                 raise NotMeetUseConditionsException("不能对自己使用哦!请@一位玩家")
             uid = at_users[0]
