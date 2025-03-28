@@ -50,7 +50,7 @@ glue_events:
 
   shrinkage:
     weight: 10
-    positive_descriptions:
+    negative_descriptions:
       - "由于你在换蛋期打胶，你的牛牛断掉了呢！当前长度{new_length}cm!🤯"
       - "bro换蛋期就不要打胶了！你的牛牛萎缩了{diff}cm！💩"
     effect: 0.5
