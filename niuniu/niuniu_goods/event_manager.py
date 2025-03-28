@@ -114,14 +114,14 @@ async def process_glue_event(
         #     )
         #     return result, new_length, diff
 
-        desc_template = choose_description(
+        desc_template, need_abs = choose_description(
             diff,
             event.positive_descriptions,
             event.negative_descriptions,
             event.no_change_descriptions,
         )
         result = desc_template.format(
-            diff=round(abs(diff), 2),
+            diff=round(abs(diff) if need_abs else diff, 2),
             new_length=round(new_length, 2),
             ban_time=event.ban_time,
         )
