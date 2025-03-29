@@ -22,7 +22,7 @@ GOODS = [
         duration=60*20,
         des="会让人变得香香软软的东西，使用后自己下次打胶变短概率翻倍，遇到负面效果概率翻倍，持续20分钟",
         glue_effect=0.3,
-        glue_negative_weight=1.5,
+        glue_negative_weight=5,
     ),
     PropModel(
         name="美波里的神奇药水",
