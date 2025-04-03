@@ -24,7 +24,7 @@ class RapidEffect(BaseModel):
     连续打胶效果模型，用于存储连续打胶事件的描述文本、系数和禁用时间。
 
     Attributes:
-        positive_descriptions (list[str]): 事件增加文本
+        positive_descriptions (list[str] | None): 事件增加文本
         no_change_descriptions (list[str] | None): 事件不变文本
         negative_descriptions (list[str] | None): 事件减少文本
         coefficient (float): 系数
@@ -32,7 +32,7 @@ class RapidEffect(BaseModel):
         ban_time (int): 禁用时间（秒）
     """
 
-    positive_descriptions: list[str]
+    positive_descriptions: list[str] | None = None
     """事件增加文本"""
     no_change_descriptions: list[str] | None = None
     """事件不变文本"""
@@ -52,7 +52,7 @@ class GlueEvent(BaseModel):
 
     Attributes:
         weight (int): 事件权重
-        positive_descriptions (list[str]): 事件增加文本
+        positive_descriptions (list[str] | None): 事件增加文本
         no_change_descriptions (list[str] | None): 事件不变文本
         negative_descriptions (list[str] | None): 事件减少文本
         coefficient (float): 系数
@@ -67,7 +67,7 @@ class GlueEvent(BaseModel):
 
     weight: float
     """事件权重"""
-    positive_descriptions: list[str]
+    positive_descriptions: list[str] | None = None
     """事件增加文本"""
     no_change_descriptions: list[str] | None = None
     """事件不变文本"""
