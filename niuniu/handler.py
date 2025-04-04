@@ -114,7 +114,7 @@ async def _(session: Uninfo):
     if length > 0:
         await niuniu_register.send(Text(f"牛牛长出来啦！足足有{length}cm呢"), reply_to=True)
     else:
-        await niuniu_regi ster.send(Text(f"牛牛长出来了？牛牛不见了！你是个可爱的女孩纸！！深度足足有{abs(length)}呢！"), reply_to=True)
+        await niuniu_register.send(Text(f"牛牛长出来了？牛牛不见了！你是个可爱的女孩纸！！深度足足有{abs(length)}呢！"), reply_to=True)
 
 
 @niuniu_unsubscribe.handle()
