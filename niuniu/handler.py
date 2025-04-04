@@ -111,7 +111,10 @@ async def _(session: Uninfo):
     length = await NiuNiu.random_length()
     await NiuNiuUser.create(uid=uid, length=length)
     await NiuNiu.record_length(uid, 0, length, "register")
-    await niuniu_register.send(Text(f"牛牛长出来啦！足足有{length}cm呢"), reply_to=True)
+    if length > 0:
+        await niuniu_register.send(Text(f"牛牛长出来啦！足足有{length}cm呢"), reply_to=True)
+    else:
+        await niuniu_regi ster.send(Text(f"牛牛长出来了？牛牛不见了！你是个可爱的女孩纸！！深度足足有{abs(length)}呢！"), reply_to=True)
 
 
 @niuniu_unsubscribe.handle()
@@ -335,7 +338,10 @@ async def hit_glue(session: Uninfo):
                 f"休息一下吧，会炸膛的！{time_rest}s后再来吧",
                 f"打咩哟，你的牛牛会爆炸的，休息{time_rest}s再来吧",
             ]
-            await niuniu_hit_glue.send(random.choice(glue_refuse), reply_to=True)
+            await niuniu_hit_glue.send(
+               Text(random.choice(glue_refuse)),
+               reply_to=True
+            )
             return
 
     # 更新冷却时间
