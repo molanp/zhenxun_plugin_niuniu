@@ -54,7 +54,7 @@ async def process_glue_event(
     # 检查是否有 Buff 效果
     buff = await get_buffs(uid)
     if buff.get("expire_time", 0) > time.time():
-        origin_length = abs(origin_length) * buff.get("effect", 1)
+        origin_length = origin_length * buff.get("effect", 1)
 
     # 根据权重选择事件
     event_names = list(events.keys())
