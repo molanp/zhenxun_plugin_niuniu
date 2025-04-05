@@ -35,7 +35,7 @@ class Fencing:
         origin_my = my_length
         origin_oppo = oppo_length
         # 获取用户当前道具的击剑加成
-        my_buff = await apply_buff(my_qq)
+        my_buff = await get_buffs(my_qq)
         fencing_weight = my_buff.get("fencing_weight", 1.0)
 
         # 传递到胜率计算
