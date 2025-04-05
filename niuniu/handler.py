@@ -30,7 +30,7 @@ from .database import Sqlite
 from .fence import Fencing
 from .model import NiuNiuUser
 from .niuniu import NiuNiu
-from .niuniu_goods.event_manager import get_current_prop, process_glue_event
+from .niuniu_goods.event_manager import get_buffs, process_glue_event
 
 niuniu_register = on_alconna(
     Alconna("注册牛牛"),
@@ -307,7 +307,7 @@ async def _(session: Uninfo, match: Match[int]):
 async def hit_glue(session: Uninfo):
     uid = session.user.id
     origin_length = await NiuNiu.get_length(uid)
-    current_prop = await get_current_prop(uid)
+    current_prop = await get_buffs(uid)
     if origin_length is None:
         await niuniu_hit_glue.send(
             Text(

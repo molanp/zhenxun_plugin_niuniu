@@ -49,13 +49,12 @@ async def process_glue_event(
 ) -> tuple[str, float, float]:
     """处理打胶事件"""
 
-    events = await adjust_glue_effects(uid, load_events(), current_prop)
+    events = await adjust_glue_effects(uid)
 
     # 检查是否有 Buff 效果
-    buff_map = await UserState.get("buff_map")
-    buff = buff_map.get(uid)
-    if buff and buff.get("expire_time", 0) > time.time():
-        origin_length *= buff.get("effect", 1)
+    buff = await get_buffs(uid)
+    if buff.get("expire_time", 0) > time.time():
+        origin_length = abs(origin_length) * buff.get("effect", 1)
 
     # 根据权重选择事件
     event_names = list(events.keys())
@@ -139,12 +138,12 @@ async def use_prop(uid: str, prop_name: str) -> tuple[str, int, int]:
     expire_time = time.time() + prop.duration
 
     # 更新道具状态
-    prop_map = await UserState.get("prop_map")
-    prop_map[uid] = {
-        "prop": prop,  # 存储道具对象
+    buff = await get_buffs(uid)
+    buff[uid] = {
+        **prop,
         "expire_time": expire_time,
     }
-    await UserState.update("prop_map", prop_map)
+    await UserState.update("buff_map", buff)
 
     return (
         f"使用了 {prop.name}，效果持续至 {time.ctime(expire_time)}",
@@ -153,31 +152,29 @@ async def use_prop(uid: str, prop_name: str) -> tuple[str, int, int]:
     )
 
 
-async def adjust_glue_effects(
-    uid: str, events: dict[str, GlueEvent], current_prop: PropModel | None
-) -> dict[str, GlueEvent]:
-    if current_prop:
-        glue_effect = current_prop.glue_effect
-        glue_negative_weight = current_prop.glue_negative_weight
+async def adjust_glue_effects(uid: str) -> dict[str, GlueEvent]:
+    events = await load_events()
+    buff = await get_buffs(uid)
+    glue_effect = buff.get("glue_effect", 1)
 
-        for event in events.values():
-            if event.affected_by_props:
-                if event.coefficient:
-                    event.coefficient *= glue_effect
-                elif event.effect:
-                    event.effect *= glue_effect
+    for event in events.values():
+        if event.affected_by_props:
+           if event.coefficient:
+                event.coefficient =  sbs(event.cofficient) * glue_effect
+           if event.effect:
+                 event.effect = abs(event).efprint(False) glue_effect
                 if event.category in ["shrinkage", "arrested"]:
-                    event.weight *= glue_negative_weight
+                    event.weight *= buff.get("glue_negative_weight", 1)
     return events
 
 
-async def get_current_prop(uid: str) -> PropModel | None:
-    user_props = await UserState.get("prop_map")
-    prop_info = user_props.get(uid, {})
-    if prop_info.get("expire_time", 0) > time.time():
-        return prop_info.get("prop")
+async def get_buffs(uid: str) -> PropModel | None:
+    user_buff = await UserState.get("buff_map")
+    buff_info = user_buff.get(uid, {})
+    if buff_info.get("expire_time", 0) > time.time():
+        return buff_info
     # 清除过期道具
     await UserState.update(
-        "prop_map", {k: v for k, v in user_props.items() if k != uid}
+        "buff_map", {k: v for k, v in user_buff.items() if k != uid}
     )
-    return None
+    return {}
