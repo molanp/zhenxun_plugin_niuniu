@@ -162,7 +162,7 @@ async def adjust_glue_effects(uid: str) -> dict[str, GlueEvent]:
            if event.coefficient:
                 event.coefficient *= glue_effect
            if event.effect:
-                 event.effect = abs(event.effect) * glue_effect
+                 event.effect = event.effect * glue_effect
                 if event.category in ["shrinkage", "arrested"]:
                     event.weight *= buff.get("glue_negative_weight", 1)
     return events
