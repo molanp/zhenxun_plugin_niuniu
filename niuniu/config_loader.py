@@ -123,7 +123,7 @@ class PropModel(BaseModel):
     """打胶触发负面事件的倍数"""
 
 
-def load_events() -> dict[str, GlueEvent]:
+async def load_events() -> dict[str, GlueEvent]:
     """
     加载事件配置文件，返回一个包含打胶事件的字典。
 
@@ -134,4 +134,4 @@ def load_events() -> dict[str, GlueEvent]:
     with open(config_path, encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
-    return {key: GlueEvent(**value) for key, value in config["glue_events"].items()}
+    return {key: GlueEvent(**value) for key, value in config.items()}

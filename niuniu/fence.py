@@ -1,10 +1,11 @@
 import random
 import time
 
-from zhenxun.plugins.niuniu.utils import UserState
+from .utils import UserState
 
 from .model import NiuNiuUser
 from .niuniu import NiuNiu
+from .niuniu_goods.event_manager import get_buffs
 
 
 class Fencing:
@@ -34,9 +35,8 @@ class Fencing:
         origin_my = my_length
         origin_oppo = oppo_length
         # 获取用户当前道具的击剑加成
-        user_props = await UserState.get("user_props")
-        my_prop_info = user_props.get(my_qq, {})
-        fencing_weight = my_prop_info.get("prop", {}).get("fencing_weight", 1.0)
+        my_buff = await get_buffs(my_qq)
+        fencing_weight = my_buff.get("fencing_weight", 1.0)
 
         # 传递到胜率计算
         win_probability = await cls.calculate_win_probability(
@@ -115,7 +115,7 @@ class Fencing:
         reduce *= max(0.3, balance_factor)
 
         # 获取用户 Buff 效果
-        buff = (await UserState.get("buff_map")).get(uid, {})
+        buff = await get_buffs(uid)
         if buff and buff.get("expire_time", 0) > time.time():
             reduce *= buff.get("effect", 1)
 
