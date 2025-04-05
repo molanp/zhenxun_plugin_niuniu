@@ -160,7 +160,7 @@ async def adjust_glue_effects(uid: str) -> dict[str, GlueEvent]:
     for event in events.values():
         if event.affected_by_props:
            if event.coefficient:
-                event.coefficient =  abs(event.cofficient) * glue_effect
+                event.coefficient *= glue_effect
            if event.effect:
                  event.effect = abs(event.effect) * glue_effect
                 if event.category in ["shrinkage", "arrested"]:
