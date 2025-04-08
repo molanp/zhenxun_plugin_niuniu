@@ -148,7 +148,7 @@ async def _(session: Uninfo, msg: UniMsg):
         next_time = await UserState.set_or_get("fence_time_map", uid, default=None)
         if next_time is None:
            raise KeyError
-        if time.time() + FENCE_COOLDOWN < next_time:
+        if time.time() < next_time:
             time_rest = next_time - time.time()
             jj_refuse = [
                 f"不行不行，你的身体会受不了的，歇{time_rest}s再来吧",
@@ -182,12 +182,12 @@ async def _(session: Uninfo, msg: UniMsg):
         next_fenced_time = await UserState.set_or_get("fenced_time_map", at, default=None ) 
         if next_fenced_time is None:
             fenced_time = await NiuNiu.last_fenced_time(at)
-        protect_fenced_time_user = time.time() + FENCED_PROTECTION
-        if protect_fenced_time_user < next_fenced_time:
+        now_fenced_time_user = time.time()
+        if now_fenced_time_user < next_fenced_time:
             tips = [
-                f"对方刚被击剑过，需要休息{next_fenced_time - protect_fenced_time_user}秒才能再次被击剑",  # noqa: E501
-                f"对方牛牛还在恢复中，{next_fenced_time - protect_fenced_time_user}秒后再来吧",
-                f"禁止连续击剑同一用户！请{next_fenced_time - protect_fenced_time_user}秒后再来!",
+                f"对方刚被击剑过，需要休息{next_fenced_time - now_fenced_time_user}秒才能再次被击剑",  # noqa: E501
+                f"对方牛牛还在恢复中，{next_fenced_time - now_fenced_time_user}秒后再来吧",
+                f"禁止连续击剑同一用户！请{next_fenced_time - now_fenced_time_user}秒后再来!",
             ]
             await niuniu_fencing.send(random.choice(tips), reply_message=True)
             return
@@ -322,9 +322,9 @@ async def hit_glue(session: Uninfo):
     is_rapid_glue = False
     with contextlib.suppress(KeyError):
         next_hit_glue_time = await UserState.set_or_get("gluing_time_map", uid, default=0)
-        glue_after_cooldown_time = time.time() + GLUE_COOLDOWN
-        if glue_after_cooldown_time < next_hit_glue_time:
-            time_rest = next_hit_glue_time - glue_after_cooldown_time
+        glue_now_time = time.time()
+        if glue_now_time < next_hit_glue_time:
+            time_rest = next_hit_glue_time - glue_now_time
             glue_refuse = [
                 f"不行不行，你的身体会受不了的，歇{time_rest}s再来吧",
                 f"休息一下吧，会炸膛的！{time_rest}s后再来吧",
