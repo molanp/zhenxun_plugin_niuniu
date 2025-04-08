@@ -203,7 +203,7 @@ async def _(session: Uninfo, msg: UniMsg):
         )
         await UserState.set_or_get(
             "fenced_time_map",
-            at, FENCED_PROTECTION
+            at, time.time() + FENCED_PROTECTION
         )
         await niuniu_fencing.send(result, reply_message=True)
     except RuntimeError as e:
