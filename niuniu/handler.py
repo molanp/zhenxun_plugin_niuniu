@@ -321,7 +321,7 @@ async def hit_glue(session: Uninfo):
     # 检查冷却时间
     is_rapid_glue = False
     with contextlib.suppress(KeyError):
-        next_hit_glue_time = await UserState.get("gluing_time_map", uid, default=0)
+        next_hit_glue_time = await UserState.set_or_get("gluing_time_map", uid, default=0)
         glue_after_cooldown_time = time.time() + GLUE_COOLDOWN
         if glue_after_cooldown_time < next_hit_glue_time:
             time_rest = next_hit_glue_time - glue_after_cooldown_time

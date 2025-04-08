@@ -8,19 +8,6 @@ from ..utils import UserState
 from .goods import get_prop_by_name
 
 
-async def apply_buff(uid: str, event: Any) -> None:
-    """应用 Buff 效果"""
-    if not event.buff:
-        return  # 如果事件没有 Buff，则直接返回
-
-    # 检查 Buff 是否有效
-    if event.buff.effect is not None and event.buff.duration is not None:
-        await UserState.set_or_get("buff_map", uid, {
-            "effect": event.buff.effect,
-            "expire_time": time.time() + event.buff.duration,
-        })
-
-
 def choose_description(
     diff: float,
     positive_descs: list[str] | None,
@@ -48,8 +35,8 @@ async def process_glue_event(
 
     # 检查是否有 Buff 效果
     buff = await get_buffs(uid)
-    if buff.get("expire_time", 0) > time.time():
-        origin_length = origin_length * buff.get("effect", 1)
+    if buff:
+        origin_length = origin_length * buff.effect
 
     # 根据权重选择事件
     event_names = list(events.keys())
@@ -97,10 +84,6 @@ async def process_glue_event(
         else:
             raise ValueError(f"Invalid event category: {event.category}")
 
-        # 应用 Buff 效果
-        if event.buff:
-            await apply_buff(uid, event)
-
         # 处理连续子事件
         # if event.next_event and event.next_event in events:
         #     result, new_length, diff = await process_glue_event(
@@ -146,7 +129,7 @@ async def use_prop(uid: str, prop_name: str) -> tuple[str, int, int]:
 async def adjust_glue_effects(uid: str) -> dict[str, GlueEvent]:
     events = await load_events()
     buff = await get_buffs(uid)
-    glue_effect = buff.get("glue_effect", 1)
+    glue_effect = buff.glue_effect
 
     for event in events.values():
         if event.affected_by_props:
@@ -155,7 +138,7 @@ async def adjust_glue_effects(uid: str) -> dict[str, GlueEvent]:
            if event.effect:
                 event.effect = event.effect * glue_effect
            if event.category in ["shrinkage", "arrested"]:
-                event.weight *= buff.get("glue_negative_weight", 1)
+                event.weight *= buff.glue_negative_weight
     return events
 
 

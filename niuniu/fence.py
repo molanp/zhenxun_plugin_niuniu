@@ -36,7 +36,7 @@ class Fencing:
         origin_oppo = oppo_length
         # 获取用户当前道具的击剑加成
         my_buff = await get_buffs(my_qq)
-        fencing_weight = my_buff.get("fencing_weight", 1.0)
+        fencing_weight = my_buff.fencing_weight
 
         # 传递到胜率计算
         win_probability = await cls.calculate_win_probability(
@@ -116,8 +116,8 @@ class Fencing:
 
         # 获取用户 Buff 效果
         buff = await get_buffs(uid)
-        if buff and buff.get("expire_time", 0) > time.time():
-            reduce *= buff.get("effect", 1)
+        if buff:
+            reduce *= buff.effect
 
         if increase_length:
             my += reduce
