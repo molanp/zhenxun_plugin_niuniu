@@ -36,7 +36,7 @@ async def process_glue_event(
     # 检查是否有 Buff 效果
     buff = await get_buffs(uid)
     if buff:
-        origin_length = origin_length * buff.effect
+        origin_length *= buff.effect
 
     # 根据权重选择事件
     event_names = list(events.keys())
