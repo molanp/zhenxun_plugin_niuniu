@@ -13,16 +13,12 @@ async def apply_buff(uid: str, event: Any) -> None:
     if not event.buff:
         return  # 如果事件没有 Buff，则直接返回
 
-    buff_map = await UserState.get("buff_map")
-    buff_map.setdefault(uid, {})  # 确保用户有默认的 Buff 数据
-
     # 检查 Buff 是否有效
     if event.buff.effect is not None and event.buff.duration is not None:
-        buff_map[uid] = {
+        await UserState.set_or_get("buff_map", uid, {
             "effect": event.buff.effect,
             "expire_time": time.time() + event.buff.duration,
-        }
-        await UserState.update("buff_map", buff_map)
+        })
 
 
 def choose_description(
@@ -45,7 +41,6 @@ async def process_glue_event(
     uid: str,
     origin_length: float,
     is_rapid: bool,
-    current_prop: PropModel | None,
 ) -> tuple[str, float, float]:
     """处理打胶事件"""
 
@@ -138,12 +133,8 @@ async def use_prop(uid: str, prop_name: str) -> tuple[str, int, int]:
     expire_time = time.time() + prop.duration
 
     # 更新道具状态
-    buff = await get_buffs(uid)
-    buff[uid] = {
-        **prop,
-        "expire_time": expire_time,
-    }
-    await UserState.update("buff_map", buff)
+    await UserState.set_or_get("buff_map", uid, prop.expire_time=expire_time,
+    )
 
     return (
         f"使用了 {prop.name}，效果持续至 {time.ctime(expire_time)}",
@@ -168,13 +159,22 @@ async def adjust_glue_effects(uid: str) -> dict[str, GlueEvent]:
     return events
 
 
-async def get_buffs(uid: str) -> PropModel | None:
-    user_buff = await UserState.get("buff_map")
-    buff_info = user_buff.get(uid, {})
-    if buff_info.get("expire_time", 0) > time.time():
+async def get_buffs(uid: str) -> Any | None:
+    """
+    获取用户的 buff，如果已过期，则清除并返回空。
+    
+    :param uid: 用户的唯一标识
+    :return: 用户的 buff 信息（未过期）或 None
+    """
+    # 获取 buff 信息
+    buff_info = await UserState.set_or_get("buff_map", uid, default=None)
+
+    # 如果 buff 存在且未过期
+    if buff_info and buff_info.expire_time > time.time():
         return buff_info
+
     # 清除过期道具
-    await UserState.update(
-        "buff_map", {k: v for k, v in user_buff.items() if k != uid}
-    )
-    return {}
+    await UserState.del_key("buff_map", uid)
+
+    # 返回空，表示该用户的 buff 已过期
+    return None

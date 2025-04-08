@@ -1,9 +1,9 @@
 import time
 
-from zhenxun.plugins.niuniu.niuniu import NiuNiu
-from zhenxun.plugins.niuniu.niuniu_goods.event_manager import use_prop
-from zhenxun.plugins.niuniu.niuniu_goods.goods import GOODS
-from zhenxun.plugins.niuniu.utils import UserState
+from .niuniu import NiuNiu
+from .niuniu_goods.event_manager import use_prop
+from .niuniu_goods.goods import GOODS
+from .utils import UserState
 from zhenxun.services.log import logger
 from zhenxun.utils.decorator.shop import NotMeetUseConditionsException, shop_register
 
@@ -20,10 +20,14 @@ def create_handler(good):
                 raise NotMeetUseConditionsException("不能对自己使用哦!请@一位玩家")
             uid = at_users[0]
             logger.info(f"{uid} 被 {user_id} 使用了蒙汗药")
-            await UserState.update(
-                "gluing_time_map",
-                {**await UserState.get("gluing_time_map"), uid: time.time() + 300},
-            )
+            await UserState.set_or_get(
+                "gluing_time_map", uid, 
+                (
+                   await UserState.set_or_get(
+                      "gluing_time_map",
+                      uid,
+                      default=time.time()
+                      ))+300)
 
     elif good.name == "美波里的神奇药水":
         async def handler(user_id: str): # type: ignore

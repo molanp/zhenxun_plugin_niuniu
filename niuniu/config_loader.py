@@ -121,6 +121,8 @@ class PropModel(BaseModel):
     """打胶效果的倍数"""
     glue_negative_weight: float = 1
     """打胶触发负面事件的倍数"""
+    expire_time: int = 0
+    """过期时间"""
 
 
 async def load_events() -> dict[str, GlueEvent]:
