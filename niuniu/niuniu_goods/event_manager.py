@@ -113,10 +113,10 @@ async def use_prop(uid: str, prop_name: str) -> tuple[str, int, int]:
         return "无效的道具", 0, 0
 
     # 计算过期时间
-    expire_time = time.time() + prop.duration
+    prop.expire_time = time.time() + prop.duration
 
     # 更新道具状态
-    await UserState.set_or_get("buff_map", uid, prop.expire_time=expire_time,
+    await UserState.set_or_get("buff_map", uid, prop,
     )
 
     return (
