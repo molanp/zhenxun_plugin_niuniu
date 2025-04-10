@@ -116,8 +116,7 @@ async def use_prop(uid: str, prop_name: str) -> tuple[str, int, int]:
     prop.expire_time = time.time() + prop.duration
 
     # 更新道具状态
-    await UserState.set_or_get("buff_map", uid, prop,
-    )
+    await UserState.set_or_get("buff_map", uid, prop)
 
     return (
         f"使用了 {prop.name}，效果持续至 {time.ctime(expire_time)}",
