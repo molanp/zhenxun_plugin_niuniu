@@ -112,9 +112,16 @@ async def _(session: Uninfo):
     await NiuNiuUser.create(uid=uid, length=length)
     await NiuNiu.record_length(uid, 0, length, "register")
     if length > 0:
-        await niuniu_register.send(Text(f"牛牛长出来啦！足足有{length}cm呢"), reply_to=True)
+        await niuniu_register.send(
+            Text(f"牛牛长出来啦！足足有{length}cm呢"), reply_to=True
+        )
     else:
-        await niuniu_register.send(Text(f"牛牛长出来了？牛牛不见了！你是个可爱的女孩纸！！深度足足有{abs(length)}呢！"), reply_to=True)
+        await niuniu_register.send(
+            Text(
+                f"牛牛长出来了？牛牛不见了！你是个可爱的女孩纸！！深度足足有{abs(length)}呢！"
+            ),
+            reply_to=True,
+        )
 
 
 @niuniu_unsubscribe.handle()
@@ -147,7 +154,7 @@ async def _(session: Uninfo, msg: UniMsg):
     with contextlib.suppress(KeyError):
         next_time = await UserState.set_or_get("fence_time_map", uid, default=None)
         if next_time is None:
-           raise KeyError
+            raise KeyError
         if time.time() < next_time:
             time_rest = next_time - time.time()
             jj_refuse = [
@@ -179,9 +186,11 @@ async def _(session: Uninfo, msg: UniMsg):
         if opponent_long is None:
             raise RuntimeError("对方还没有牛牛呢！不能击剑！")
         # 被击剑者冷却检查
-        next_fenced_time = await UserState.set_or_get("fenced_time_map", at, default=None ) 
+        next_fenced_time = await UserState.set_or_get(
+            "fenced_time_map", at, default=None
+        )
         if next_fenced_time is None:
-            fenced_time = await NiuNiu.last_fenced_time(at)
+            now_fenced_time_user = await NiuNiu.last_fenced_time(at)
         now_fenced_time_user = time.time()
         if now_fenced_time_user < next_fenced_time:
             tips = [
@@ -194,16 +203,11 @@ async def _(session: Uninfo, msg: UniMsg):
 
         # 处理击剑逻辑
         result = await Fencing.fencing(my_long, opponent_long, at, uid)
-        
 
         # 更新数据
+        await UserState.set_or_get("fence_time_map", uid, time.time() + FENCE_COOLDOWN)
         await UserState.set_or_get(
-            "fence_time_map",
-            uid, time.time() + FENCE_COOLDOWN
-        )
-        await UserState.set_or_get(
-            "fenced_time_map",
-            at, time.time() + FENCED_PROTECTION
+            "fenced_time_map", at, time.time() + FENCED_PROTECTION
         )
         await niuniu_fencing.send(result, reply_message=True)
     except RuntimeError as e:
@@ -318,10 +322,10 @@ async def hit_glue(session: Uninfo):
         )
         return
 
-    # 检查冷却时间
-    is_rapid_glue = False
     with contextlib.suppress(KeyError):
-        next_hit_glue_time = await UserState.set_or_get("gluing_time_map", uid, default=0)
+        next_hit_glue_time = await UserState.set_or_get(
+            "gluing_time_map", uid, default=0
+        )
         glue_now_time = time.time()
         if glue_now_time < next_hit_glue_time:
             time_rest = next_hit_glue_time - glue_now_time
@@ -330,21 +334,14 @@ async def hit_glue(session: Uninfo):
                 f"休息一下吧，会炸膛的！{time_rest}s后再来吧",
                 f"打咩哟，你的牛牛会爆炸的，休息{time_rest}s再来吧",
             ]
-            await niuniu_hit_glue.send(
-               Text(random.choice(glue_refuse)),
-               reply_to=True
-            )
+            await niuniu_hit_glue.send(Text(random.choice(glue_refuse)), reply_to=True)
             return
-    if time.time() < QUICK_GLUE_COOLDOWN + next_hit_glue_time:
-            is_rapid_glue = True
-
+    is_rapid_glue = time.time() < QUICK_GLUE_COOLDOWN + next_hit_glue_time
     # 更新冷却时间
-    await UserState.set_or_get(
-        "gluing_time_map", uid, time.time() + GLUE_COOLDOWN
-    )
+    await UserState.set_or_get("gluing_time_map", uid, time.time() + GLUE_COOLDOWN)
 
     # 处理事件
-    result, new_length, diff = await process_glue_event(
+    result, new_length, _ = await process_glue_event(
         uid, origin_length, is_rapid_glue
     )
 
@@ -396,11 +393,11 @@ async def my_record(session: Uninfo, match: Match[int]):
                 "origin": record["origin_length"],
                 "new": record["new_length"],
                 "diff": f"+{record['diff']}" if record["diff"] > 0 else record["diff"],
-                "diff_color": "positive"
-                if record["diff"] > 0
-                else "negative"
-                if record["diff"] < 0
-                else "neutral",
+                "diff_color": (
+                    "positive"
+                    if record["diff"] > 0
+                    else "negative" if record["diff"] < 0 else "neutral"
+                ),
             }
             for record in records
         ],
@@ -414,4 +411,3 @@ async def my_record(session: Uninfo, match: Match[int]):
         templates=result,
     )
     await niuniu_my_record.send(Image(raw=pic), reply_to=True)
-

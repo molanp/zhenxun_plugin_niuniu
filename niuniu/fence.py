@@ -1,8 +1,6 @@
 import random
 import time
 
-from .utils import UserState
-
 from .model import NiuNiuUser
 from .niuniu import NiuNiu
 from .niuniu_goods.event_manager import get_buffs
@@ -117,7 +115,7 @@ class Fencing:
         # 获取用户 Buff 效果
         buff = await get_buffs(uid)
         if buff:
-            reduce *= buff.effect
+            reduce *= buff.glue_effect
 
         if increase_length:
             my += reduce

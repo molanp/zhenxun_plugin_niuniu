@@ -12,24 +12,29 @@ class UserState:
     _lock: ClassVar[asyncio.Lock] = asyncio.Lock()
 
     @classmethod
-    async def set_or_get(cls, name: str, key: Any = None, data: Any = None, default = None) -> Any:
-        """
-        设置键值对或获取字典内容:
-        - 如果提供了 `data`，则更新字典中的 `key`。
-        - 如果仅提供 `key`，则返回对应键的值。
-        - 如果未提供 `key` 和 `data`，则返回整个字典内容。
-        """
-        async with cls._lock:
-            if name not in cls._state:
-                raise KeyError(f"Dictionary '{name}' not found in UserState")
+    def _get_state(cls, name: str) -> dict[Any, Any]:
+        if name not in cls._state:
+            raise KeyError(f"Dictionary '{name}' not found in UserState")
+        return cls._state[name]
 
-            if data is not None:  # 更新键值对
-                cls._state[name][key] = data
-                return data
-            elif key is not None:  # 获取键值
-                return cls._state[name].get(key, default)
-            else:  # 获取整个字典
-                return cls._state[name]
+    @classmethod
+    def _update_key(cls, dic: dict[Any, Any], key: Any, data: Any) -> Any:
+        dic[key] = data
+        return data
+
+    @classmethod
+    def _get_key(cls, dic: dict[Any, Any], key: Any, default: Any) -> Any:
+        return dic.get(key, default)
+
+    @classmethod
+    async def set_or_get(
+        cls, name: str, key: Any = None, data: Any = None, default: Any = None
+    ) -> Any:
+        async with cls._lock:
+            dictionary = cls._get_state(name)
+            if data is not None:
+                return cls._update_key(dictionary, key, data)
+            return dictionary if key is None else cls._get_key(dictionary, key, default)
 
     @classmethod
     async def del_key(cls, name: str, key: Any = None) -> None:

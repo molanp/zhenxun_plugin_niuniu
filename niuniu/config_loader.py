@@ -121,7 +121,7 @@ class PropModel(BaseModel):
     """打胶效果的倍数"""
     glue_negative_weight: float = 1
     """打胶触发负面事件的倍数"""
-    expire_time: int = 0
+    expire_time: float = 0
     """过期时间"""
 
 
