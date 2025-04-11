@@ -14,7 +14,6 @@ from tortoise.exceptions import DoesNotExist
 
 from zhenxun.configs.path_config import DATA_PATH
 from zhenxun.models.user_console import UserConsole
-from zhenxun.plugins.niuniu.utils import UserState
 from zhenxun.utils.enum import GoldHandle
 from zhenxun.utils.message import MessageUtils
 from zhenxun.utils.platform import PlatformUtils
@@ -28,9 +27,10 @@ from .config import (
 )
 from .database import Sqlite
 from .fence import Fencing
+from .utils import UserState
 from .model import NiuNiuUser
 from .niuniu import NiuNiu
-from .niuniu_goods.event_manager import get_buffs, process_glue_event
+from .niuniu_goods.event_manager import process_glue_event
 
 niuniu_register = on_alconna(
     Alconna("注册牛牛"),
@@ -112,9 +112,16 @@ async def _(session: Uninfo):
     await NiuNiuUser.create(uid=uid, length=length)
     await NiuNiu.record_length(uid, 0, length, "register")
     if length > 0:
-        await niuniu_register.send(Text(f"牛牛长出来啦！足足有{length}cm呢"), reply_to=True)
+        await niuniu_register.send(
+            Text(f"牛牛长出来啦！足足有{length}cm呢"), reply_to=True
+        )
     else:
-        await niuniu_register.send(Text(f"牛牛长出来了？牛牛不见了！你是个可爱的女孩纸！！深度足足有{abs(length)}呢！"), reply_to=True)
+        await niuniu_register.send(
+            Text(
+                f"牛牛长出来了？牛牛不见了！你是个可爱的女孩纸！！深度足足有{abs(length)}呢！"
+            ),
+            reply_to=True,
+        )
 
 
 @niuniu_unsubscribe.handle()
@@ -144,14 +151,13 @@ async def _(session: Uninfo):
 async def _(session: Uninfo, msg: UniMsg):
     at_list = [i.target for i in msg if isinstance(i, At)]
     uid = session.user.id
-    fence_time_map = await UserState.get("fence_time_map")
-    fenced_time_map = await UserState.get("fenced_time_map")
     with contextlib.suppress(KeyError):
-        time_pass = int(time.time() - fence_time_map.get(uid, 0))
-        if time_pass < FENCE_COOLDOWN:
-            time_rest = FENCE_COOLDOWN - time_pass
+        next_time = await UserState.get("fence_time_map", uid)
+        if next_time is None:
+            raise KeyError
+        if time.time() < next_time:
+            time_rest = next_time - time.time()
             jj_refuse = [
-                f"才过去了{time_pass}s时间,你就又要击剑了，真是饥渴难耐啊",
                 f"不行不行，你的身体会受不了的，歇{time_rest}s再来吧",
                 f"你这种男同就应该被送去集中营！等待{time_rest}s再来吧",
                 f"打咩哟！你的牛牛会炸的，休息{time_rest}s再来吧",
@@ -180,34 +186,25 @@ async def _(session: Uninfo, msg: UniMsg):
         if opponent_long is None:
             raise RuntimeError("对方还没有牛牛呢！不能击剑！")
         # 被击剑者冷却检查
-        if fenced_time_map.get(at) is None:
-            fenced_time = await NiuNiu.last_fenced_time(at)
-        else:
-            fenced_time = fenced_time_map[at]
-        fenced_time_pass = int(time.time() - fenced_time)
-        if fenced_time_pass < FENCED_PROTECTION:  # 5分钟保护期
+        next_fenced_time = await UserState.get("fenced_time_map", at, None)
+        if next_fenced_time is None:
+            now_fenced_time_user = await NiuNiu.last_fenced_time(at)
+        now_fenced_time_user = time.time()
+        if now_fenced_time_user < next_fenced_time:
             tips = [
-                f"对方刚被击剑过，需要休息{FENCED_PROTECTION - fenced_time_pass}秒才能再次被击剑",  # noqa: E501
-                f"对方牛牛还在恢复中，{FENCED_PROTECTION - fenced_time_pass}秒后再来吧",
-                f"禁止连续击剑同一用户！请等待{FENCED_PROTECTION - fenced_time_pass}秒",
+                f"对方刚被击剑过，需要休息{next_fenced_time - now_fenced_time_user}秒才能再次被击剑",  # noqa: E501
+                f"对方牛牛还在恢复中，{next_fenced_time - now_fenced_time_user}秒后再来吧",
+                f"禁止连续击剑同一用户！请{next_fenced_time - now_fenced_time_user}秒后再来!",
             ]
             await niuniu_fencing.send(random.choice(tips), reply_message=True)
             return
 
         # 处理击剑逻辑
         result = await Fencing.fencing(my_long, opponent_long, at, uid)
-        fence_time_map[uid] = time.time()   # 更新本地fence_time_map
-        fenced_time_map[at] = time.time()     # 更新本地fenced_time_map
 
         # 更新数据
-        await UserState.update(
-            "fence_time_map",
-            fence_time_map,
-        )
-        await UserState.update(
-            "fenced_time_map",
-            fenced_time_map,
-        )
+        await UserState.update("fence_time_map", uid, time.time() + FENCE_COOLDOWN)
+        await UserState.update("fenced_time_map", at, time.time() + FENCED_PROTECTION)
         await niuniu_fencing.send(result, reply_message=True)
     except RuntimeError as e:
         await niuniu_fencing.send(str(e), reply_message=True)
@@ -307,7 +304,6 @@ async def _(session: Uninfo, match: Match[int]):
 async def hit_glue(session: Uninfo):
     uid = session.user.id
     origin_length = await NiuNiu.get_length(uid)
-    current_prop = await get_buffs(uid)
     if origin_length is None:
         await niuniu_hit_glue.send(
             Text(
@@ -322,38 +318,24 @@ async def hit_glue(session: Uninfo):
         )
         return
 
-    # 检查冷却时间
-    is_rapid_glue = False
     with contextlib.suppress(KeyError):
-        time_pass = abs(
-            int(time.time() - (await UserState.get("gluing_time_map")).get(uid, 0))
-        )
-        if time_pass < QUICK_GLUE_COOLDOWN:
-            is_rapid_glue = True
-        if time_pass < GLUE_COOLDOWN:
-            time_rest = GLUE_COOLDOWN - time_pass
+        next_hit_glue_time = await UserState.get("gluing_time_map", uid, 0)
+        glue_now_time = time.time()
+        if glue_now_time < next_hit_glue_time:
+            time_rest = next_hit_glue_time - glue_now_time
             glue_refuse = [
-                f"才过去了{time_pass}s时间,你就又要打🦶了，身体受得住吗",
                 f"不行不行，你的身体会受不了的，歇{time_rest}s再来吧",
                 f"休息一下吧，会炸膛的！{time_rest}s后再来吧",
                 f"打咩哟，你的牛牛会爆炸的，休息{time_rest}s再来吧",
             ]
-            await niuniu_hit_glue.send(
-               Text(random.choice(glue_refuse)),
-               reply_to=True
-            )
+            await niuniu_hit_glue.send(Text(random.choice(glue_refuse)), reply_to=True)
             return
-
+    is_rapid_glue = time.time() < QUICK_GLUE_COOLDOWN + next_hit_glue_time
     # 更新冷却时间
-    await UserState.update(
-        "gluing_time_map",
-        {**await UserState.get("gluing_time_map"), uid: time.time()},
-    )
+    await UserState.update("gluing_time_map", uid, time.time() + GLUE_COOLDOWN)
 
     # 处理事件
-    result, new_length, diff = await process_glue_event(
-        uid, origin_length, is_rapid_glue, current_prop
-    )
+    result, new_length, _ = await process_glue_event(uid, origin_length, is_rapid_glue)
 
     # 更新数据
     await NiuNiu.update_length(uid, new_length)
@@ -403,11 +385,11 @@ async def my_record(session: Uninfo, match: Match[int]):
                 "origin": record["origin_length"],
                 "new": record["new_length"],
                 "diff": f"+{record['diff']}" if record["diff"] > 0 else record["diff"],
-                "diff_color": "positive"
-                if record["diff"] > 0
-                else "negative"
-                if record["diff"] < 0
-                else "neutral",
+                "diff_color": (
+                    "positive"
+                    if record["diff"] > 0
+                    else "negative" if record["diff"] < 0 else "neutral"
+                ),
             }
             for record in records
         ],
@@ -421,4 +403,3 @@ async def my_record(session: Uninfo, match: Match[int]):
         templates=result,
     )
     await niuniu_my_record.send(Image(raw=pic), reply_to=True)
-

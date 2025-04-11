@@ -1,28 +1,11 @@
+import contextlib
 import random
 import time
-from typing import Any
 
 from ..config_loader import GlueEvent, PropModel, load_events
 from ..niuniu import NiuNiu
 from ..utils import UserState
 from .goods import get_prop_by_name
-
-
-async def apply_buff(uid: str, event: Any) -> None:
-    """应用 Buff 效果"""
-    if not event.buff:
-        return  # 如果事件没有 Buff，则直接返回
-
-    buff_map = await UserState.get("buff_map")
-    buff_map.setdefault(uid, {})  # 确保用户有默认的 Buff 数据
-
-    # 检查 Buff 是否有效
-    if event.buff.effect is not None and event.buff.duration is not None:
-        buff_map[uid] = {
-            "effect": event.buff.effect,
-            "expire_time": time.time() + event.buff.duration,
-        }
-        await UserState.update("buff_map", buff_map)
 
 
 def choose_description(
@@ -45,7 +28,6 @@ async def process_glue_event(
     uid: str,
     origin_length: float,
     is_rapid: bool,
-    current_prop: PropModel | None,
 ) -> tuple[str, float, float]:
     """处理打胶事件"""
 
@@ -53,8 +35,8 @@ async def process_glue_event(
 
     # 检查是否有 Buff 效果
     buff = await get_buffs(uid)
-    if buff.get("expire_time", 0) > time.time():
-        origin_length = origin_length * buff.get("effect", 1)
+    if buff:
+        origin_length *= buff.glue_effect
 
     # 根据权重选择事件
     event_names = list(events.keys())
@@ -102,10 +84,6 @@ async def process_glue_event(
         else:
             raise ValueError(f"Invalid event category: {event.category}")
 
-        # 应用 Buff 效果
-        if event.buff:
-            await apply_buff(uid, event)
-
         # 处理连续子事件
         # if event.next_event and event.next_event in events:
         #     result, new_length, diff = await process_glue_event(
@@ -128,53 +106,54 @@ async def process_glue_event(
     return result, new_length, diff
 
 
-async def use_prop(uid: str, prop_name: str) -> tuple[str, int, int]:
+async def use_prop(uid: str, prop_name: str) -> str:
     """使用道具来调整击剑胜率和打胶效果"""
     prop = get_prop_by_name(prop_name)
     if prop is None:
-        return "无效的道具", 0, 0
+        return "无效的道具"
 
     # 计算过期时间
     expire_time = time.time() + prop.duration
+    prop.expire_time = expire_time
 
     # 更新道具状态
-    buff = await get_buffs(uid)
-    buff[uid] = {
-        **prop,
-        "expire_time": expire_time,
-    }
-    await UserState.update("buff_map", buff)
+    await UserState.update("buff_map", uid, prop)
 
-    return (
-        f"使用了 {prop.name}，效果持续至 {time.ctime(expire_time)}",
-        0,
-        0,
-    )
+    return f"使用了 {prop.name}，效果持续至 {time.ctime(expire_time)}"
 
 
 async def adjust_glue_effects(uid: str) -> dict[str, GlueEvent]:
     events = await load_events()
     buff = await get_buffs(uid)
-    glue_effect = buff.get("glue_effect", 1)
+    glue_effect = buff.glue_effect
 
     for event in events.values():
         if event.affected_by_props:
-           if event.coefficient:
+            if event.coefficient:
                 event.coefficient *= glue_effect
-           if event.effect:
+            if event.effect:
                 event.effect = event.effect * glue_effect
-           if event.category in ["shrinkage", "arrested"]:
-                event.weight *= buff.get("glue_negative_weight", 1)
+            if event.category in ["shrinkage", "arrested"]:
+                event.weight *= buff.glue_negative_weight
     return events
 
 
-async def get_buffs(uid: str) -> PropModel | None:
-    user_buff = await UserState.get("buff_map")
-    buff_info = user_buff.get(uid, {})
-    if buff_info.get("expire_time", 0) > time.time():
+async def get_buffs(uid: str) -> PropModel:
+    """
+    获取用户的 buff，如果已过期，则清除并返回空。
+
+    :param uid: 用户的唯一标识
+    :return: 用户的 buff 信息（未过期）或 None
+    """
+    # 获取 buff 信息
+    buff_info = await UserState.get("buff_map", uid)
+
+    # 如果 buff 存在且未过期
+    if buff_info and buff_info.expire_time > time.time():
         return buff_info
+
     # 清除过期道具
-    await UserState.update(
-        "buff_map", {k: v for k, v in user_buff.items() if k != uid}
-    )
-    return {}
+    with contextlib.suppress(KeyError):
+        await UserState.del_key("buff_map", uid)
+    # 返回空，表示该用户的 buff 已过期
+    return PropModel(name="None", price=-1)
