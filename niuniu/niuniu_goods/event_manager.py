@@ -1,3 +1,4 @@
+import contextlib
 import random
 import time
 
@@ -152,7 +153,7 @@ async def get_buffs(uid: str) -> PropModel:
         return buff_info
 
     # 清除过期道具
-    await UserState.del_key("buff_map", uid)
-
+    with contextlib.suppress(KeyError):
+        await UserState.del_key("buff_map", uid)
     # 返回空，表示该用户的 buff 已过期
     return PropModel(name="None", price=-1)
