@@ -113,9 +113,10 @@ async def use_prop(uid: str, prop_name: str) -> str:
 
     # 计算过期时间
     expire_time = time.time() + prop.duration
+    prop.expire_time = expire_time
 
     # 更新道具状态
-    await UserState.set_or_get("buff_map", uid, (prop.expire_time))
+    await UserState.update("buff_map", uid, prop)
 
     return f"使用了 {prop.name}，效果持续至 {time.ctime(expire_time)}"
 
@@ -144,7 +145,7 @@ async def get_buffs(uid: str) -> PropModel:
     :return: 用户的 buff 信息（未过期）或 None
     """
     # 获取 buff 信息
-    buff_info = await UserState.set_or_get("buff_map", uid, default=None)
+    buff_info = await UserState.get("buff_map", uid)
 
     # 如果 buff 存在且未过期
     if buff_info and buff_info.expire_time > time.time():

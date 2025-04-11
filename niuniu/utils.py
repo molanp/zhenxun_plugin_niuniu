@@ -27,14 +27,16 @@ class UserState:
         return dic.get(key, default)
 
     @classmethod
-    async def set_or_get(
-        cls, name: str, key: Any = None, data: Any = None, default: Any = None
-    ) -> Any:
+    async def update(cls, name: str, key: Any, data: Any) -> Any:
         async with cls._lock:
             dictionary = cls._get_state(name)
-            if data is not None:
-                return cls._update_key(dictionary, key, data)
-            return dictionary if key is None else cls._get_key(dictionary, key, default)
+            return cls._update_key(dictionary, key, data)
+
+    @classmethod
+    async def get(cls, name: str, key: Any = None, default: Any = None) -> Any:
+        # No lock needed for read-only, unless consistency is required
+        dictionary = cls._get_state(name)
+        return dictionary if key is None else cls._get_key(dictionary, key, default)
 
     @classmethod
     async def del_key(cls, name: str, key: Any = None) -> None:

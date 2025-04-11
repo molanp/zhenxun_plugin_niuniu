@@ -30,7 +30,7 @@ from .fence import Fencing
 from .utils import UserState
 from .model import NiuNiuUser
 from .niuniu import NiuNiu
-from .niuniu_goods.event_manager import get_buffs, process_glue_event
+from .niuniu_goods.event_manager import process_glue_event
 
 niuniu_register = on_alconna(
     Alconna("注册牛牛"),
@@ -152,7 +152,7 @@ async def _(session: Uninfo, msg: UniMsg):
     at_list = [i.target for i in msg if isinstance(i, At)]
     uid = session.user.id
     with contextlib.suppress(KeyError):
-        next_time = await UserState.set_or_get("fence_time_map", uid, default=None)
+        next_time = await UserState.get("fence_time_map", uid)
         if next_time is None:
             raise KeyError
         if time.time() < next_time:
@@ -186,9 +186,7 @@ async def _(session: Uninfo, msg: UniMsg):
         if opponent_long is None:
             raise RuntimeError("对方还没有牛牛呢！不能击剑！")
         # 被击剑者冷却检查
-        next_fenced_time = await UserState.set_or_get(
-            "fenced_time_map", at, default=None
-        )
+        next_fenced_time = await UserState.get("fenced_time_map", at, None)
         if next_fenced_time is None:
             now_fenced_time_user = await NiuNiu.last_fenced_time(at)
         now_fenced_time_user = time.time()
@@ -205,10 +203,8 @@ async def _(session: Uninfo, msg: UniMsg):
         result = await Fencing.fencing(my_long, opponent_long, at, uid)
 
         # 更新数据
-        await UserState.set_or_get("fence_time_map", uid, time.time() + FENCE_COOLDOWN)
-        await UserState.set_or_get(
-            "fenced_time_map", at, time.time() + FENCED_PROTECTION
-        )
+        await UserState.update("fence_time_map", uid, time.time() + FENCE_COOLDOWN)
+        await UserState.update("fenced_time_map", at, time.time() + FENCED_PROTECTION)
         await niuniu_fencing.send(result, reply_message=True)
     except RuntimeError as e:
         await niuniu_fencing.send(str(e), reply_message=True)
@@ -323,9 +319,7 @@ async def hit_glue(session: Uninfo):
         return
 
     with contextlib.suppress(KeyError):
-        next_hit_glue_time = await UserState.set_or_get(
-            "gluing_time_map", uid, default=0
-        )
+        next_hit_glue_time = await UserState.get("gluing_time_map", uid, 0)
         glue_now_time = time.time()
         if glue_now_time < next_hit_glue_time:
             time_rest = next_hit_glue_time - glue_now_time
@@ -338,12 +332,10 @@ async def hit_glue(session: Uninfo):
             return
     is_rapid_glue = time.time() < QUICK_GLUE_COOLDOWN + next_hit_glue_time
     # 更新冷却时间
-    await UserState.set_or_get("gluing_time_map", uid, time.time() + GLUE_COOLDOWN)
+    await UserState.update("gluing_time_map", uid, time.time() + GLUE_COOLDOWN)
 
     # 处理事件
-    result, new_length, _ = await process_glue_event(
-        uid, origin_length, is_rapid_glue
-    )
+    result, new_length, _ = await process_glue_event(uid, origin_length, is_rapid_glue)
 
     # 更新数据
     await NiuNiu.update_length(uid, new_length)
