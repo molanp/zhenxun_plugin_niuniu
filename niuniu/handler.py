@@ -186,7 +186,7 @@ async def _(session: Uninfo, msg: UniMsg):
         if opponent_long is None:
             raise RuntimeError("对方还没有牛牛呢！不能击剑！")
         # 被击剑者冷却检查
-        next_fenced_time = await UserState.get("fenced_time_map", at, None)
+        next_fenced_time = await UserState.get("fenced_time_map", at, 0)
         if next_fenced_time is None:
             now_fenced_time_user = await NiuNiu.last_fenced_time(at)
         now_fenced_time_user = time.time()
