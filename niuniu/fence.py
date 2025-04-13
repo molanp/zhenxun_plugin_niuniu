@@ -70,29 +70,29 @@ class Fencing:
 
     @classmethod
     async def calculate_win_probability(cls, height_a, height_b, fencing_weight=1.0, min_win=0.05, max_win=0.85):
-    # 选手 A 的初始胜率
-    p_a = 0.85 * fencing_weight
-
-    # 计算长度比例，考虑允许负数（取绝对值比较大小）
-    height_ratio = max(abs(height_a), abs(height_b)) / min(abs(height_a), abs(height_b))
-
-    # 根据长度比例计算胜率减少率
-    reduction_rate = 0.1 * (height_ratio - 1)
-
-    # 计算 A 的胜率减少量
-    reduction = p_a * reduction_rate
-
-    # 调整 A 的胜率
-    adjusted_p_a = p_a - reduction
-
-    # 如果 height_a 为负，则反转胜率方向（负数表示对抗优势减弱）
-    if height_a < 0:
-        adjusted_p_a = 1.0 - adjusted_p_a
-
-    # 确保胜率在最低和最高范围内
-    final_p_a = max(min_win, min(adjusted_p_a, max_win))
-
-    return final_p_a
+       # 选手 A 的初始胜率
+       p_a = 0.85 * fencing_weight
+   
+       # 计算长度比例，考虑允许负数（取绝对值比较大小）
+       height_ratio = max(abs(height_a), abs(height_b)) / min(abs(height_a), abs(height_b))
+   
+       # 根据长度比例计算胜率减少率
+       reduction_rate = 0.1 * (height_ratio - 1)
+   
+       # 计算 A 的胜率减少量
+       reduction = p_a * reduction_rate
+   
+       # 调整 A 的胜率
+       adjusted_p_a = p_a - reduction
+   
+       # 如果 height_a 为负，则反转胜率方向（负数表示对抗优势减弱）
+       if height_a < 0:
+           adjusted_p_a = 1.0 - adjusted_p_a
+   
+       # 确保胜率在最低和最高范围内
+       final_p_a = max(min_win, min(adjusted_p_a, max_win))
+   
+       return final_p_a
 
     @classmethod
     async def apply_skill(cls, my, oppo, increase_length, uid):
