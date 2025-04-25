@@ -38,7 +38,7 @@ from .fence import Fencing
 from .model import NiuNiuUser
 from .niuniu import NiuNiu
 from .niuniu_goods.event_manager import process_glue_event
-from .utils import UserState
+from .utils import UserState, get_name
 
 niuniu_register = on_alconna(
     Alconna("注册牛牛"),
@@ -244,7 +244,7 @@ async def _(session: Uninfo):
 
     result = {
         "avatar": f"data:image/png;base64,{avatar}",
-        "name": session.user.name,
+        "name": await get_name(session),
         "rank": user["rank"],
         "my_length": user["length"],
         "latest_gluing_time": await NiuNiu.latest_gluing_time(uid),
@@ -267,7 +267,9 @@ async def _(session: Uninfo, p: Arparma):
         await niuniu_length_rank.finish(Text("排行榜人数不能超过50哦..."))
     gid = session.group.id if session.group else None
     if not gid:
-        await niuniu_length_rank.finish(Text("私聊中无法查看 '牛牛长度排行'，请发送 '牛牛长度总排行'"))
+        await niuniu_length_rank.finish(
+            Text("私聊中无法查看 '牛牛长度排行'，请发送 '牛牛长度总排行'")
+        )
     image = await NiuNiu.rank(num, session)
     await MessageUtils.build_message(image).send()
 
@@ -290,7 +292,9 @@ async def _(session: Uninfo, p: Arparma):
         await niuniu_deep_rank.finish(Text("排行榜人数不能超过50哦..."))
     gid = session.group.id if session.group else None
     if not gid:
-        await niuniu_deep_rank.finish(Text("私聊中无法查看 '牛牛深度排行'，请发送 '牛牛深度总排行'"))
+        await niuniu_deep_rank.finish(
+            Text("私聊中无法查看 '牛牛深度排行'，请发送 '牛牛深度总排行'")
+        )
     image = await NiuNiu.rank(num, session, True)
     await MessageUtils.build_message(image).send()
 
@@ -368,7 +372,7 @@ async def my_record(session: Uninfo, p: Arparma):
     # 构建模板数据
     result = {
         "avatar": f"data:image/png;base64,{avatar}",
-        "name": session.user.name,
+        "name": await get_name(session),
         "records": [
             {
                 "action_icon": {

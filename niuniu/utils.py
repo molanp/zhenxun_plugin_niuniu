@@ -1,6 +1,10 @@
 import asyncio
 from typing import Any, ClassVar
 
+from nonebot import get_bot
+
+from zhenxun.utils.platform import PlatformUtils
+
 
 class UserState:
     _state: ClassVar[dict[str, dict[Any, Any]]] = {
@@ -55,3 +59,9 @@ class UserState:
                 del cls._state[name][key]  # 删除指定键
             else:
                 raise KeyError(f"Key '{key}' not found in dictionary '{name}'")
+
+
+async def get_name(session) -> str:
+    gid = session.group.id if session.group else None
+    user = await PlatformUtils.get_user(get_bot(session.self_id), session.user.id, gid)
+    return session.user.name if user is None else user.card or user.name

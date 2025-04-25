@@ -69,30 +69,31 @@ class Fencing:
         return result
 
     @classmethod
-    async def calculate_win_probability(cls, height_a, height_b, fencing_weight=1.0, min_win=0.05, max_win=0.85):
-       # 选手 A 的初始胜率
-       p_a = 0.85 * fencing_weight
-   
-       # 计算长度比例，考虑允许负数（取绝对值比较大小）
-       height_ratio = max(abs(height_a), abs(height_b)) / min(abs(height_a), abs(height_b))
-   
-       # 根据长度比例计算胜率减少率
-       reduction_rate = 0.1 * (height_ratio - 1)
-   
-       # 计算 A 的胜率减少量
-       reduction = p_a * reduction_rate
-   
-       # 调整 A 的胜率
-       adjusted_p_a = p_a - reduction
-   
-       # 如果 height_a 为负，则反转胜率方向（负数表示对抗优势减弱）
-       if height_a < 0:
-           adjusted_p_a = 1.0 - adjusted_p_a
-   
-       # 确保胜率在最低和最高范围内
-       final_p_a = max(min_win, min(adjusted_p_a, max_win))
-   
-       return final_p_a
+    async def calculate_win_probability(
+        cls, height_a, height_b, fencing_weight=1.0, min_win=0.05, max_win=0.85
+    ):
+        # 选手 A 的初始胜率
+        p_a = 0.85 * fencing_weight
+
+        # 计算长度比例，考虑允许负数（取绝对值比较大小）
+        height_ratio = max(abs(height_a), abs(height_b)) / min(
+            abs(height_a), abs(height_b)
+        )
+
+        # 根据长度比例计算胜率减少率
+        reduction_rate = 0.1 * (height_ratio - 1)
+
+        # 计算 A 的胜率减少量
+        reduction = p_a * reduction_rate
+
+        # 调整 A 的胜率
+        adjusted_p_a = p_a - reduction
+
+        # 如果 height_a 为负，则反转胜率方向（负数表示对抗优势减弱）
+        if height_a < 0:
+            adjusted_p_a = 1.0 - adjusted_p_a
+
+        return max(min_win, min(adjusted_p_a, max_win))
 
     @classmethod
     async def apply_skill(cls, my, oppo, increase_length, uid):
@@ -120,6 +121,7 @@ class Fencing:
         buff = await get_buffs(uid)
         if buff:
             reduce *= buff.glue_effect
+        reduce = round(reduce, 2)
 
         if increase_length:
             my += reduce
@@ -127,14 +129,14 @@ class Fencing:
             if my < 0:
                 result = random.choice(
                     [
-                        f"哦吼!？你的牛牛在长大欸!长大了{round(reduce, 2)}cm!",
-                        f"牛牛凹进去的深度变浅了欸!变浅了{round(reduce, 2)}cm!",
+                        f"哦吼!？你的牛牛在长大欸!长大了{reduce}cm!",
+                        f"牛牛凹进去的深度变浅了欸!变浅了{reduce}cm!",
                     ]
                 )
             else:
                 result = (
-                    f"你以绝对的长度让对方屈服了呢!你的长度增加{round(reduce, 2)}cm,"
-                    f"对方减少了{round(0.8 * reduce, 2)}cm!你当前长度为{round(my, 2)}cm!"
+                    f"你以绝对的长度让对方屈服了呢!你的长度增加{reduce}cm,"
+                    f"对方减少了{round(0.8 * reduce,2)}cm!你当前长度为{round(my, 2)}cm!"
                 )
         else:
             my -= reduce
@@ -142,14 +144,14 @@ class Fencing:
             if my < 0:
                 result = random.choice(
                     [
-                        f"哦吼!？看来你的牛牛因为击剑而凹进去了呢🤣🤣🤣!凹进去了{round(reduce, 2)}cm!",
-                        f"由于对方击剑技术过于高超,造成你的牛牛凹了进去呢😰!凹进去了{round(reduce, 2)}cm!",
-                        f"好惨啊,本来就不长的牛牛现在凹进去了呢😂!凹进去了{round(reduce, 2)}cm!",
+                        f"哦吼!？看来你的牛牛因为击剑而凹进去了呢🤣🤣🤣!凹进去了{reduce}cm!",
+                        f"由于对方击剑技术过于高超,造成你的牛牛凹了进去呢😰!凹进去了{reduce}cm!",
+                        f"好惨啊,本来就不长的牛牛现在凹进去了呢😂!凹进去了{reduce}cm!",
                     ]
                 )
             else:
                 result = (
-                    f"对方以绝对的长度让你屈服了呢!你的长度减少{round(reduce, 2)}cm,"
+                    f"对方以绝对的长度让你屈服了呢!你的长度减少{reduce}cm,"
                     f"当前长度{round(my, 2)}cm!"
                 )
         return result, my, oppo
