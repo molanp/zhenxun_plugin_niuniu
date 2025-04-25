@@ -5,9 +5,17 @@ import random
 import time
 
 import aiofiles
-from arclet.alconna import Args
-from nonebot import get_driver, on_command
-from nonebot_plugin_alconna import Alconna, At, Image, Match, Text, UniMsg, on_alconna
+from nonebot import get_driver
+from nonebot_plugin_alconna import (
+    Alconna,
+    Args,
+    Arparma,
+    At,
+    Image,
+    MultiVar,
+    Text,
+    on_alconna,
+)
 from nonebot_plugin_htmlrender import template_to_pic
 from nonebot_plugin_uninfo import Uninfo
 from tortoise.exceptions import DoesNotExist
@@ -27,10 +35,10 @@ from .config import (
 )
 from .database import Sqlite
 from .fence import Fencing
-from .utils import UserState
 from .model import NiuNiuUser
 from .niuniu import NiuNiu
 from .niuniu_goods.event_manager import process_glue_event
+from .utils import UserState
 
 niuniu_register = on_alconna(
     Alconna("注册牛牛"),
@@ -42,9 +50,9 @@ niuniu_unsubscribe = on_alconna(
     priority=5,
     block=True,
 )
-niuniu_fencing = on_command(
-    "击剑",
-    aliases={"JJ", "Jj", "jJ", "jj"},
+niuniu_fencing = on_alconna(
+    Alconna("击剑", Args["targets?", MultiVar(At), []]),
+    aliases=("JJ", "Jj", "jJ", "jj"),
     priority=5,
     block=True,
 )
@@ -126,7 +134,7 @@ async def _(session: Uninfo):
 
 @niuniu_unsubscribe.handle()
 async def _(session: Uninfo):
-    uid = str(session.user.id)
+    uid = session.user.id
     length = await NiuNiu.get_length(uid)
     if length is None:
         await niuniu_unsubscribe.send(
@@ -148,15 +156,15 @@ async def _(session: Uninfo):
 
 
 @niuniu_fencing.handle()
-async def _(session: Uninfo, msg: UniMsg):
-    at_list = [i.target for i in msg if isinstance(i, At)]
+async def _(session: Uninfo, p: Arparma):
+    at_list = p.query("targets")
     uid = session.user.id
     with contextlib.suppress(KeyError):
         next_time = await UserState.get("fence_time_map", uid)
         if next_time is None:
             raise KeyError
         if time.time() < next_time:
-            time_rest = next_time - time.time()
+            time_rest = round(next_time - time.time(), 2)
             jj_refuse = [
                 f"不行不行，你的身体会受不了的，歇{time_rest}s再来吧",
                 f"你这种男同就应该被送去集中营！等待{time_rest}s再来吧",
@@ -190,11 +198,12 @@ async def _(session: Uninfo, msg: UniMsg):
         if next_fenced_time is None:
             next_fenced_time = (await NiuNiu.last_fenced_time(at)) + FENCED_PROTECTION
         now_fenced_time_user = time.time()
+        rest = round(next_fenced_time - now_fenced_time_user, 2)
         if now_fenced_time_user < next_fenced_time:
             tips = [
-                f"对方刚被击剑过，需要休息{next_fenced_time - now_fenced_time_user}秒才能再次被击剑",  # noqa: E501
-                f"对方牛牛还在恢复中，{next_fenced_time - now_fenced_time_user}秒后再来吧",
-                f"禁止连续击剑同一用户！请{next_fenced_time - now_fenced_time_user}秒后再来!",
+                f"对方刚被击剑过，需要休息{rest}秒才能再次被击剑",
+                f"对方牛牛还在恢复中，{rest}秒后再来吧",
+                f"禁止连续击剑同一用户！请{rest}秒后再来!",
             ]
             await niuniu_fencing.send(random.choice(tips), reply_message=True)
             return
@@ -251,52 +260,52 @@ async def _(session: Uninfo):
 
 
 @niuniu_length_rank.handle()
-async def _(session: Uninfo, match: Match[int]):
-    if not match.available:
-        match.result = 10
-    if match.result > 50:
+async def _(session: Uninfo, p: Arparma):
+    num = p.query("num")
+    assert isinstance(num, int)
+    if num > 50:
         await MessageUtils.build_message("排行榜人数不能超过50哦...").finish()
     gid = session.group.id if session.group else None
     if not gid:
         await MessageUtils.build_message(
             "私聊中无法查看 '牛牛长度排行'，请发送 '牛牛长度总排行'"
         ).finish()
-    image = await NiuNiu.rank(match.result, session)
+    image = await NiuNiu.rank(num, session)
     await MessageUtils.build_message(image).send()
 
 
 @niuniu_length_rank_all.handle()
-async def _(session: Uninfo, match: Match[int]):
-    if not match.available:
-        match.result = 10
-    if match.result > 50:
+async def _(session: Uninfo, p: Arparma):
+    num = p.query("num")
+    assert isinstance(num, int)
+    if num > 50:
         await MessageUtils.build_message("排行榜人数不能超过50哦...").finish()
-    image = await NiuNiu.rank(match.result, session, is_all=True)
+    image = await NiuNiu.rank(num, session, is_all=True)
     await MessageUtils.build_message(image).send()
 
 
 @niuniu_deep_rank.handle()
-async def _(session: Uninfo, match: Match[int]):
-    if not match.available:
-        match.result = 10
-    if match.result > 50:
+async def _(session: Uninfo, p: Arparma):
+    num = p.query("num")
+    assert isinstance(num, int)
+    if num > 50:
         await MessageUtils.build_message("排行榜人数不能超过50哦...").finish()
     gid = session.group.id if session.group else None
     if not gid:
         await MessageUtils.build_message(
             "私聊中无法查看 '牛牛深度排行'，请发送 '牛牛深度总排行'"
         ).finish()
-    image = await NiuNiu.rank(match.result, session, True)
+    image = await NiuNiu.rank(num, session, True)
     await MessageUtils.build_message(image).send()
 
 
 @niuniu_deep_rank_all.handle()
-async def _(session: Uninfo, match: Match[int]):
-    if not match.available:
-        match.result = 10
-    if match.result > 50:
+async def _(session: Uninfo, p: Arparma):
+    num = p.query("num")
+    assert isinstance(num, int)
+    if num > 50:
         await MessageUtils.build_message("排行榜人数不能超过50哦...").finish()
-    image = await NiuNiu.rank(match.result, session, True, is_all=True)
+    image = await NiuNiu.rank(num, session, True, is_all=True)
     await MessageUtils.build_message(image).send()
 
 
@@ -318,18 +327,16 @@ async def hit_glue(session: Uninfo):
         )
         return
 
-    with contextlib.suppress(KeyError):
-        next_hit_glue_time = await UserState.get("gluing_time_map", uid, 0)
-        glue_now_time = time.time()
-        if glue_now_time < next_hit_glue_time:
-            time_rest = next_hit_glue_time - glue_now_time
-            glue_refuse = [
-                f"不行不行，你的身体会受不了的，歇{time_rest}s再来吧",
-                f"休息一下吧，会炸膛的！{time_rest}s后再来吧",
-                f"打咩哟，你的牛牛会爆炸的，休息{time_rest}s再来吧",
-            ]
-            await niuniu_hit_glue.send(Text(random.choice(glue_refuse)), reply_to=True)
-            return
+    next_hit_glue_time = await UserState.get("gluing_time_map", uid, 0)
+    glue_now_time = time.time()
+    if glue_now_time < next_hit_glue_time:
+        time_rest = round(next_hit_glue_time - glue_now_time, 2)
+        glue_refuse = [
+            f"不行不行，你的身体会受不了的，歇{time_rest}s再来吧",
+            f"休息一下吧，会炸膛的！{time_rest}s后再来吧",
+            f"打咩哟，你的牛牛会爆炸的，休息{time_rest}s再来吧",
+        ]
+        await niuniu_hit_glue.finish(Text(random.choice(glue_refuse)), reply_to=True)
     is_rapid_glue = time.time() < QUICK_GLUE_COOLDOWN + next_hit_glue_time
     # 更新冷却时间
     await UserState.update("gluing_time_map", uid, time.time() + GLUE_COOLDOWN)
@@ -346,9 +353,10 @@ async def hit_glue(session: Uninfo):
 
 
 @niuniu_my_record.handle()
-async def my_record(session: Uninfo, match: Match[int]):
+async def my_record(session: Uninfo, p: Arparma):
     uid = session.user.id
-    num = match.result if match.available else 10
+    num = p.query("num")
+    assert isinstance(num, int)
     records = await NiuNiu.get_user_records(uid, num)
 
     if not records:
@@ -388,7 +396,9 @@ async def my_record(session: Uninfo, match: Match[int]):
                 "diff_color": (
                     "positive"
                     if record["diff"] > 0
-                    else "negative" if record["diff"] < 0 else "neutral"
+                    else "negative"
+                    if record["diff"] < 0
+                    else "neutral"
                 ),
             }
             for record in records
