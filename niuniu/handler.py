@@ -181,7 +181,7 @@ async def _(session: Uninfo, p: Arparma):
             raise RuntimeError(
                 "你还没有牛牛呢！不能击剑！\n请发送'注册牛牛'领取你的牛牛!"
             )
-        at = str(at_list[0])
+        at = str(at_list[0].target)
         if len(at_list) >= 2:
             raise RuntimeError(
                 random.choice(
