@@ -264,14 +264,12 @@ async def _(session: Uninfo, p: Arparma):
     num = p.query("num")
     assert isinstance(num, int)
     if num > 50:
-        await MessageUtils.build_message("排行榜人数不能超过50哦...").finish()
+        await niuniu_length_rank.finish(Text("排行榜人数不能超过50哦..."))
     gid = session.group.id if session.group else None
     if not gid:
-        await MessageUtils.build_message(
-            "私聊中无法查看 '牛牛长度排行'，请发送 '牛牛长度总排行'"
-        ).finish()
+        await niuniu_length_rank.finish(Text("私聊中无法查看 '牛牛长度排行'，请发送 '牛牛长度总排行'"))
     image = await NiuNiu.rank(num, session)
-    await MessageUtils.build_message(image).send()
+    await niuniu_length_rank.finish(Image(raw=image))
 
 
 @niuniu_length_rank_all.handle()
@@ -279,9 +277,9 @@ async def _(session: Uninfo, p: Arparma):
     num = p.query("num")
     assert isinstance(num, int)
     if num > 50:
-        await MessageUtils.build_message("排行榜人数不能超过50哦...").finish()
+        await niuniu_length_rank_all.finish(Text("排行榜人数不能超过50哦..."))
     image = await NiuNiu.rank(num, session, is_all=True)
-    await MessageUtils.build_message(image).send()
+    await niuniu_length_rank_all.finish(Image(raw=image))
 
 
 @niuniu_deep_rank.handle()
@@ -289,14 +287,12 @@ async def _(session: Uninfo, p: Arparma):
     num = p.query("num")
     assert isinstance(num, int)
     if num > 50:
-        await MessageUtils.build_message("排行榜人数不能超过50哦...").finish()
+        await niuniu_deep_rank.finish(Text("排行榜人数不能超过50哦..."))
     gid = session.group.id if session.group else None
     if not gid:
-        await MessageUtils.build_message(
-            "私聊中无法查看 '牛牛深度排行'，请发送 '牛牛深度总排行'"
-        ).finish()
+        await niuniu_deep_rank.finish(Text("私聊中无法查看 '牛牛深度排行'，请发送 '牛牛深度总排行'"))
     image = await NiuNiu.rank(num, session, True)
-    await MessageUtils.build_message(image).send()
+    await niuniu_deep_rank.finish(Image(raw=image))
 
 
 @niuniu_deep_rank_all.handle()
@@ -304,9 +300,9 @@ async def _(session: Uninfo, p: Arparma):
     num = p.query("num")
     assert isinstance(num, int)
     if num > 50:
-        await MessageUtils.build_message("排行榜人数不能超过50哦...").finish()
+        await niuniu_deep_rank_all.finish(Text("排行榜人数不能超过50哦..."))
     image = await NiuNiu.rank(num, session, True, is_all=True)
-    await MessageUtils.build_message(image).send()
+    await niuniu_deep_rank_all.finish(Image(raw=image))
 
 
 @niuniu_hit_glue.handle()
@@ -357,6 +353,8 @@ async def my_record(session: Uninfo, p: Arparma):
     uid = session.user.id
     num = p.query("num")
     assert isinstance(num, int)
+    if num > 50:
+        await niuniu_my_record.finish(Text("记录查看数不能超过50哦..."))
     records = await NiuNiu.get_user_records(uid, num)
 
     if not records:
