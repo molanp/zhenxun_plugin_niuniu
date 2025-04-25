@@ -269,7 +269,7 @@ async def _(session: Uninfo, p: Arparma):
     if not gid:
         await niuniu_length_rank.finish(Text("私聊中无法查看 '牛牛长度排行'，请发送 '牛牛长度总排行'"))
     image = await NiuNiu.rank(num, session)
-    await niuniu_length_rank.finish(Image(raw=image))
+    await MessageUtils.build_message(image).send()
 
 
 @niuniu_length_rank_all.handle()
@@ -279,7 +279,7 @@ async def _(session: Uninfo, p: Arparma):
     if num > 50:
         await niuniu_length_rank_all.finish(Text("排行榜人数不能超过50哦..."))
     image = await NiuNiu.rank(num, session, is_all=True)
-    await niuniu_length_rank_all.finish(Image(raw=image))
+    await MessageUtils.build_message(image).send()
 
 
 @niuniu_deep_rank.handle()
@@ -292,7 +292,7 @@ async def _(session: Uninfo, p: Arparma):
     if not gid:
         await niuniu_deep_rank.finish(Text("私聊中无法查看 '牛牛深度排行'，请发送 '牛牛深度总排行'"))
     image = await NiuNiu.rank(num, session, True)
-    await niuniu_deep_rank.finish(Image(raw=image))
+    await MessageUtils.build_message(image).send()
 
 
 @niuniu_deep_rank_all.handle()
@@ -302,7 +302,7 @@ async def _(session: Uninfo, p: Arparma):
     if num > 50:
         await niuniu_deep_rank_all.finish(Text("排行榜人数不能超过50哦..."))
     image = await NiuNiu.rank(num, session, True, is_all=True)
-    await niuniu_deep_rank_all.finish(Image(raw=image))
+    await MessageUtils.build_message(image).send()
 
 
 @niuniu_hit_glue.handle()
