@@ -5,10 +5,10 @@ import random
 import time
 
 import aiofiles
-from arclet.alconna import Args
 from nonebot import get_driver
 from nonebot_plugin_alconna import (
     Alconna,
+    Args,
     Arparma,
     At,
     Image,
