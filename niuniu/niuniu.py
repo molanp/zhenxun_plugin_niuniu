@@ -138,16 +138,15 @@ class NiuNiu:
 
     @classmethod
     async def comment(cls, length: float) -> str:
-        if length <= -100:
+        if length <= -50:
             return (
                 "哇哦!你已经进化成魅魔了!"
                 "魅魔在击剑时有20%的几率消耗自身长度吞噬对方牛牛呢!"
             )
-        elif -100 < length <= -50:
-            return "嗯……好像已经穿过了身体吧……从另一面来看也可以算是凸出来的吧？"
         elif -50 < length <= -25:
             return random.choice(
                 [
+                    "嗯……好像已经穿过了身体吧……从另一面来看也可以算是凸出来的吧？",
                     "这名女生,你的身体很健康哦!",
                     "WOW,真的凹进去了好多呢!",
                     "你已经是我们女孩子的一员啦!",
@@ -193,11 +192,6 @@ class NiuNiu:
                 [
                     "话说这种真的有可能吗？",
                     "厚礼谢!",
-                ]
-            )
-        elif 50 < length <= 100:
-            return random.choice(
-                [
                     "已经突破天际了嘛……",
                     "唔……这玩意应该不会变得比我高吧？",
                     "你这个长度会死人的……!",
