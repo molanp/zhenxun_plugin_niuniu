@@ -76,7 +76,10 @@ async def process_glue_event(
         elif event.category == "reduce":
             new_length, diff = await NiuNiu.gluing(origin_length, reduce=True)
         elif event.category == "shrinkage":
-            new_length = round(abs(origin_length) * event.effect, 2)
+            if origin_length >= 0: 
+               new_length = round(origin_length * event.effect, 2)
+            else:
+               new_length = round(origin_length / event.effect, 2)
             diff = new_length - origin_length
         elif event.category == "arrested":
             new_length = origin_length
