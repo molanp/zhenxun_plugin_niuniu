@@ -223,5 +223,5 @@ class Fencing:
         await UserState.update("fence_time_map", user_id, time.time() + random.randrange(120, 300))
         return r.format(
             nickname=BotConfig.self_nickname,
-            diff=round(new_user - user),
+            diff=abs(round(new_user - user)),
         )
