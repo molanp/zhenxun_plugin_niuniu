@@ -191,8 +191,8 @@ async def _(session: Uninfo, p: Arparma):
         if at == uid:
             raise RuntimeError("不能和自己击剑哦！")
         if at == session.self_id:
-            await Fencing.with_bot(session, uid)
-            return
+            r = await Fencing.with_bot(session, uid)
+            raise RuntimeError(r)
         opponent_long = await NiuNiu.get_length(at)
         if opponent_long is None:
             raise RuntimeError("对方还没有牛牛呢！不能击剑！")
