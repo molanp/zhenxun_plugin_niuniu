@@ -126,7 +126,7 @@ async def _(session: Uninfo):
     else:
         await niuniu_register.send(
             Text(
-                f"牛牛长出来了？牛牛不见了！你是个可爱的女孩纸！！深度足足有{abs(length)}呢！"
+                f"牛牛长出来了？牛牛不见了！你是个可爱的女孩纸！！深度足足有{abs(length)}cm呢！"
             ),
             reply_to=True,
         )
@@ -190,6 +190,9 @@ async def _(session: Uninfo, p: Arparma):
             )
         if at == uid:
             raise RuntimeError("不能和自己击剑哦！")
+        if at == session.self_id:
+            r = await Fencing.with_bot(session, uid)
+            raise RuntimeError(r)
         opponent_long = await NiuNiu.get_length(at)
         if opponent_long is None:
             raise RuntimeError("对方还没有牛牛呢！不能击剑！")

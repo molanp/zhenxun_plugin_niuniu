@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import aiofiles
 from pydantic import BaseModel
 import yaml
 
@@ -133,7 +134,9 @@ async def load_events() -> dict[str, GlueEvent]:
         dict[str, GlueEvent]: 包含打胶事件的字典，键为事件名称，值为 GlueEvent 实例
     """
     config_path = Path(__file__).parent / "events.yaml"
-    with open(config_path, encoding="utf-8") as f:
-        config = yaml.safe_load(f)
+    async with aiofiles.open(config_path, encoding="utf-8") as f:
+        content = await f.read()
+        config = yaml.safe_load(content)
+
 
     return {key: GlueEvent(**value) for key, value in config.items()}

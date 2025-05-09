@@ -2,7 +2,7 @@ import contextlib
 import random
 import time
 
-from ..config_loader import GlueEvent, PropModel, load_events
+from .model import GlueEvent, PropModel, load_events
 from ..niuniu import NiuNiu
 from ..utils import UserState
 from .goods import get_prop_by_name
