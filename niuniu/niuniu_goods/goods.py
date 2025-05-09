@@ -1,4 +1,4 @@
-from ..config_loader import PropModel
+from .model import PropModel
 
 GOODS = [
     PropModel(

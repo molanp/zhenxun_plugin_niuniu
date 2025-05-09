@@ -1,6 +1,11 @@
 import random
 import time
 
+from nonebot_plugin_uninfo import Uninfo
+
+from zhenxun.configs.config import BotSetting
+from zhenxun.models.sign_user import SignUser
+
 from .model import NiuNiuUser
 from .niuniu import NiuNiu
 from .niuniu_goods.event_manager import get_buffs
@@ -20,7 +25,7 @@ class Fencing:
         return round(abs(rd + random.uniform(0.13, 0.24) * rd) * 0.3, 2)
 
     @classmethod
-    async def fencing(cls, my_length, oppo_length, at_qq, my_qq):
+    async def fencing(cls, my_length, oppo_length, at_qq, my_qq) -> str:
         """
         确定击剑比赛的结果。
 
@@ -96,7 +101,9 @@ class Fencing:
         return max(min_win, min(adjusted_p_a, max_win))
 
     @classmethod
-    async def apply_skill(cls, my, oppo, increase_length, uid):
+    async def apply_skill(
+        cls, my, oppo, increase_length, uid
+    ) -> tuple[str, float, float]:
         """
         应用击剑技巧并生成结果字符串。
 
@@ -105,9 +112,6 @@ class Fencing:
             oppo (float): 长度2。
             increase_length (bool): 是否增加长度。
             uid (str): 用户 ID。
-
-        Returns:
-            str: 包含结果的字符串。
         """
         base_change = min(abs(my), abs(oppo)) * 0.1  # 基于较小值计算变化量
         reduce = await cls.fence(base_change)  # 传入基础变化量
@@ -136,7 +140,8 @@ class Fencing:
             else:
                 result = (
                     f"你以绝对的长度让对方屈服了呢!你的长度增加{reduce}cm,"
-                    f"对方减少了{round(0.8 * reduce,2)}cm!你当前长度为{round(my, 2)}cm!"
+                    f"对方减少了{round(0.8 * reduce, 2)}cm!"
+                    "你当前长度为{round(my, 2)}cm!"
                 )
         else:
             my -= reduce
@@ -174,3 +179,46 @@ class Fencing:
         await NiuNiu.record_length(my_qq, origin_my, new_my, "fencing")
         await NiuNiuUser.filter(uid=at_qq).update(length=new_oppo)
         await NiuNiu.record_length(at_qq, origin_oppo, new_oppo, "fenced")
+
+    @classmethod
+    async def with_bot(cls, session: Uninfo, user_id: str) -> str:
+        """
+        获取 bot 实例
+
+        Args:
+            session (Uninfo): 会话对象
+            user_id (str): 用户 ID
+
+        Returns:
+            str: 击剑结果
+        """
+        bot = await NiuNiu.get_length(session.self_id)
+        user = await NiuNiu.get_length(user_id)
+        assert user is not None
+        if bot is not None:
+            await NiuNiuUser.filter(uid=bot).delete()
+        sign_user = await SignUser.get_or_none(user_id=user_id)
+        impression = 0 if sign_user is None else sign_user.impression
+        if impression >= 50:
+            _, new_user, _ = await cls.apply_skill(user, 0, True, user_id)
+            r = random.choice(
+                [
+                    "{nickname}喜欢你，你的长度增加了{diff}cm呢！",
+                ]
+            )
+        else:
+            _, new_user, _ = await cls.apply_skill(user, 0, False, user_id)
+            r = random.choice(
+                [
+                    "你弄疼{nickname}了，给你头咬掉，牛牛长度变短{diff}cm",
+                    "{nickname}感到恶心，脚踩了你的牛牛，牛牛长度变短{diff}cm",
+                    "你被{nickname}的牛牛戳到了，牛牛长度变短{diff}cm",
+                    "{nickname}偷偷给你下了药，你的牛牛长度变短了{diff}cm",
+                ]
+            )
+        await NiuNiuUser.filter(uid=user_id).update(length=user)
+        await NiuNiu.record_length(user_id, user, new_user, "fencing")
+        return r.format(
+            nickname=BotSetting.self_nickname,
+            diff=new_user - user,
+        )

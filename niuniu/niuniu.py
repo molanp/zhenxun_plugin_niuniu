@@ -261,7 +261,7 @@ class NiuNiu:
 
         # 生成标题
         title_type = "深度" if deep else "长度"
-        scope = "群组内" if session.group else "全局"
+        scope = "全局" if is_all else "群组内"
         title = f"{title_type}{scope}排行"
         tip = f"你的排名在{scope}第 {index} 位哦!"
 
