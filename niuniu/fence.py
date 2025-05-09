@@ -3,7 +3,7 @@ import time
 
 from nonebot_plugin_uninfo import Uninfo
 
-from zhenxun.configs.config import BotSetting
+from zhenxun.configs.config import BotConfig
 from zhenxun.models.sign_user import SignUser
 
 from .model import NiuNiuUser
@@ -222,6 +222,6 @@ class Fencing:
         await NiuNiu.record_length(user_id, user, new_user, "fencing")
         await UserState.update("fence_time_map", user_id, time.time() + random.randrange(120, 300))
         return r.format(
-            nickname=BotSetting.self_nickname,
+            nickname=BotConfig.self_nickname,
             diff=new_user - user,
         )
