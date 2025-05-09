@@ -218,10 +218,10 @@ class Fencing:
                     "{nickname}偷偷给你下了药，你的牛牛长度变短了{diff}cm",
                 ]
             )
-        await NiuNiuUser.filter(uid=user_id).update(length=new_user)
-        await NiuNiu.record_length(user_id, user, new_user, "fencing")
+        await NiuNiuUser.filter(uid=user_id).update(length=round(new_user))
+        await NiuNiu.record_length(user_id, round(user), round(new_user), "fencing")
         await UserState.update("fence_time_map", user_id, time.time() + random.randrange(120, 300))
         return r.format(
             nickname=BotConfig.self_nickname,
-            diff=new_user - user,
+            diff=round(new_user - user),
         )
