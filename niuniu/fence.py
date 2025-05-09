@@ -8,6 +8,7 @@ from zhenxun.models.sign_user import SignUser
 
 from .model import NiuNiuUser
 from .niuniu import NiuNiu
+from .utils import UserState
 from .niuniu_goods.event_manager import get_buffs
 
 
@@ -141,7 +142,7 @@ class Fencing:
                 result = (
                     f"你以绝对的长度让对方屈服了呢!你的长度增加{reduce}cm,"
                     f"对方减少了{round(0.8 * reduce, 2)}cm!"
-                    "你当前长度为{round(my, 2)}cm!"
+                    f"你当前长度为{round(my, 2)}cm!"
                 )
         else:
             my -= reduce
@@ -196,7 +197,7 @@ class Fencing:
         user = await NiuNiu.get_length(user_id)
         assert user is not None
         if bot is not None:
-            await NiuNiuUser.filter(uid=bot).delete()
+            await NiuNiuUser.filter(uid=session.self_id).delete()
         sign_user = await SignUser.get_or_none(user_id=user_id)
         impression = 0 if sign_user is None else sign_user.impression
         if impression >= 50:
@@ -218,6 +219,7 @@ class Fencing:
             )
         await NiuNiuUser.filter(uid=user_id).update(length=user)
         await NiuNiu.record_length(user_id, user, new_user, "fencing")
+        await UserState.update("fence_time_map", user_id, time.time() + random.randrange(120, 300))
         return r.format(
             nickname=BotSetting.self_nickname,
             diff=new_user - user,
