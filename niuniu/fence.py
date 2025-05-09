@@ -197,6 +197,7 @@ class Fencing:
         user = await NiuNiu.get_length(user_id)
         assert user is not None
         if bot is not None:
+            """Bot不应该参与排行榜统计"""
             await NiuNiuUser.filter(uid=session.self_id).delete()
         sign_user = await SignUser.get_or_none(user_id=user_id)
         impression = 0 if sign_user is None else sign_user.impression
@@ -217,7 +218,7 @@ class Fencing:
                     "{nickname}偷偷给你下了药，你的牛牛长度变短了{diff}cm",
                 ]
             )
-        await NiuNiuUser.filter(uid=user_id).update(length=user)
+        await NiuNiuUser.filter(uid=user_id).update(length=new_user)
         await NiuNiu.record_length(user_id, user, new_user, "fencing")
         await UserState.update("fence_time_map", user_id, time.time() + random.randrange(120, 300))
         return r.format(
