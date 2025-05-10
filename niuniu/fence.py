@@ -220,7 +220,7 @@ class Fencing:
             )
         await NiuNiuUser.filter(uid=user_id).update(length=round(new_user))
         await NiuNiu.record_length(user_id, round(user), round(new_user), "fencing")
-        await UserState.update("fence_time_map", user_id, time.time() + random.randrange(120, 300))
+        await UserState.update("fence_time_map", user_id, time.time() + random.randrange(300, 600))
         return r.format(
             nickname=BotConfig.self_nickname,
             diff=abs(round(new_user - user)),
