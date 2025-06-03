@@ -149,7 +149,6 @@ async def get_buffs(uid: str) -> PropModel:
     :return: 用户的 buff 信息（未过期）或 None
     """
     # 获取 buff 信息
-    uid = str(uid)
     buff_info = await UserState.get("buff_map", uid)
 
     # 如果 buff 存在且未过期
