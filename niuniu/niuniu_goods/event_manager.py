@@ -5,7 +5,7 @@ import time
 from .model import GlueEvent, PropModel, load_events
 from ..niuniu import NiuNiu
 from ..utils import UserState
-from .goods import get_prop_by_name
+from .goods import get_prop_by_name, get_event_buff
 
 
 def choose_description(
@@ -33,16 +33,14 @@ async def process_glue_event(
 
     events = await adjust_glue_effects(uid)
 
-    # 检查是否有 Buff 效果
-    buff = await get_buffs(uid)
-    if buff:
-        origin_length *= buff.glue_effect
-
     # 根据权重选择事件
     event_names = list(events.keys())
     weights = [e.weight for e in events.values()]
     selected = random.choices(event_names, weights=weights, k=1)[0]
     event = events[selected]
+    
+    if event.buff:
+        await apply_buff(uid, event.buff)
 
     # 处理连续打胶事件
     if is_rapid and event.rapid_effect:
@@ -125,6 +123,21 @@ async def use_prop(uid: str, prop_name: str) -> str:
     return f"使用了 {prop.name}，效果持续至 {time.ctime(prop.expire_time)}"
 
 
+async def apply_buff(uid: str, name: str) -> bool:
+    """使用事件buff来调整击剑胜率和打胶效果"""
+    buff = get_event_buff(name)
+    if buff is None:
+        return "无效的事件"
+
+    # 计算过期时间
+    expire_time = time.time() + buff.duration
+    buff.expire_time = expire_time
+
+    # 更新道具状态
+    await UserState.update("buff_map", uid, buff)
+    return True
+
+
 async def adjust_glue_effects(uid: str) -> dict[str, GlueEvent]:
     events = await load_events()
     buff = await get_buffs(uid)
@@ -159,4 +172,4 @@ async def get_buffs(uid: str) -> PropModel:
     with contextlib.suppress(KeyError):
         await UserState.del_key("buff_map", uid)
     # 返回空，表示该用户的 buff 已过期
-    return PropModel(name="None", price=-1)
+    return PropModel(name="None",)

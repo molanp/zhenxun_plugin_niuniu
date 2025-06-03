@@ -32,6 +32,42 @@ GOODS = [
     )
 ]
 
+EVENT_BUFF_MAP = [
+    PropModel(
+        name="冷静期",
+        duration=300,
+        glue_effect=0.9,
+        glue_negative_weight=1.1
+    ),
+    PropModel(
+        name="精神亢奋",
+        duration=400,
+        glue_effect=1.1
+    ),
+    PropModel(
+        name="樯橹灰飞烟灭",
+        duration=500,
+        glue_effect=0.3,
+        glue_negative_weight=3
+    )
+]
+
+
+def get_event_buff(name: str) -> PropModel:
+    """
+    通过名称获取指定的Buff。
+
+    Args:
+        name (str): Buff的名称
+
+    Returns:
+        PropModel: 如果找到匹配的Buff，返回该实例
+    """
+    buff = next((buff for buff in EVENT_BUFF_MAP if buff.name == name), None)
+    if buff is None:
+        raise ValueError("不存在该事件")
+    return buff
+
 
 def is_prop_in_list(prop_name: str) -> bool:
     """

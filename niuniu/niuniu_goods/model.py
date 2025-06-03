@@ -5,21 +5,6 @@ from pydantic import BaseModel
 import yaml
 
 
-class Buff(BaseModel):
-    """
-    Buff 模型，用于存储 Buff 的持续时间和效果系数。
-
-    Attributes:
-        duration (int): Buff 持续时间（秒）
-        effect (float): 长度变化系数（>1 增加, <1 减少）
-    """
-
-    duration: int = 0
-    """Buff 持续时间（秒）"""
-    effect: float = 1
-    """长度变化系数(>1增加, <1减少)"""
-
-
 class RapidEffect(BaseModel):
     """
     连续打胶效果模型，用于存储连续打胶事件的描述文本、系数和禁用时间。
@@ -82,7 +67,7 @@ class GlueEvent(BaseModel):
     """小黑屋时间"""
     category: str
     """事件类型"""
-    buff: Buff | None = None
+    buff: str | None = None
     """Buff"""
     next_event: str | None = None
     """连续子事件"""
@@ -110,7 +95,7 @@ class PropModel(BaseModel):
     """道具的名称"""
     des: str = ""
     """道具的简介"""
-    price: int
+    price: int = -1
     """道具的价格"""
     icon: str = ""
     """道具的图标"""

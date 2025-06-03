@@ -27,9 +27,7 @@ normal:
     - 🦌太多次导致身体虚弱，牛牛长度减少了{diff}cm!
   coefficient: 1
   category: growth
-  buff:
-    duration: 300
-    effect: 0.8
+  buff: "冷静期"
   rapid_effect:
     positive_descriptions:
       - 这么着急？牛牛只微微增长了{diff}cm...🤏
@@ -38,6 +36,7 @@ normal:
       - 这么着急？牛牛却减少了{diff}cm...😢
       - bro你搞这么快只会适得其反！牛牛却减少了{diff}cm！😭
     effect: 0.9
+    buff: "樯橹灰飞烟灭"
 shrinkage:
   weight: 10
   negative_descriptions:
@@ -57,9 +56,7 @@ special_boost:
     - 你收到了群主私发的女装，冲！！！牛牛长大了{diff}cm！👗
   coefficient: 1.1
   category: special
-  buff:
-    duration: 600
-    effect: 1.1
+  buff: "精神亢奋"
 rapid_penalty:
   weight: 15
   positive_descriptions:

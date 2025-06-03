@@ -42,7 +42,7 @@ __plugin_meta__ = PluginMetadata(
     """.strip(),
     extra=PluginExtraData(
         author="molanp",
-        version="1.2.rc2",
+        version="1.2.rc3",
         menu_type="群内小游戏",
     ).dict(),
 )
