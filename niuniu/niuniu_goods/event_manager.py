@@ -122,7 +122,7 @@ async def use_prop(uid: str, prop_name: str) -> str:
     # 更新道具状态
     await UserState.update("buff_map", uid, prop)
 
-    return f"使用了 {prop.name}，效果持续至 {time.ctime(expire_time)}"
+    return f"使用了 {prop.name}，效果持续至 {time.ctime(prop.expire_time)}"
 
 
 async def adjust_glue_effects(uid: str) -> dict[str, GlueEvent]:
