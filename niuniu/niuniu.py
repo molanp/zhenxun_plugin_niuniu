@@ -1,6 +1,7 @@
 import random
 
-from nonebot import get_bot
+from nonebot import get_bot, require
+require("nonebot_plugin_uninfo")
 from nonebot_plugin_uninfo import Uninfo
 from tortoise.functions import Max, Min
 

@@ -1,70 +1,85 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NiuNiu Info</title>
-    <style>
-      .card {
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        margin: 20px;
-        padding: 20px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        background-color: #ffffff;
-      }
-      .card-header {
-        display: flex;
-        align-items: center;
-        margin-bottom: 15px;
-      }
-      .card-header img {
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        margin-right: 10px;
-      }
-      .card-header .title {
-        font-size: 18px;
-        font-weight: bold;
-      }
-      .male {
-        color: blue;
-      }
-      .female {
-        color: pink;
-      }
-      .negative-length {
-        color: red;
-      }
-      .positive-length {
-        color: green;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="card">
-      <div class="card-header">
-        <img src="{{ avatar }}" alt="{{ name }}" />
-        <span class="title">{{ name }}の牛牛信息</span>
-      </div>
-      <p><span>排名:</span><b> #{{ rank }}</b></p>
-      <p>
-        <span>性别:</span>
-        <span class="{{ 'male' if my_length > 0 else 'female' }}">
-          {{ '♂️' if my_length > 0 else '♀️' }}
-        </span>
-      </p>
-      <p>
-        <span>{{ '深' if my_length < 0 else '长' }}度:</span>
-        <span
-          class="{{ 'negative-length' if my_length < 0 else 'positive-length' }}"
-        >
-          {{ my_length | abs if my_length < 0 else my_length }}cm
-        </span>
-      </p>
-      <p><span>上次打胶时间:</span> {{ latest_gluing_time }}</p>
-      <p><span>备注:</span> {{ comment }}</p>
-    </div>
-  </body>
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>NiuNiu Character Card</title>
+	<style>
+		body {
+		  background-color: #f5f5f5;
+		}
+		.card {
+		  display: flex;
+		  flex-direction: row;
+		  border-radius: 12px;
+		  padding: 20px;
+		  margin: 10px;
+		  background: #ffffff;
+		  max-width: 650px;
+		  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+		}
+		.card-header {
+		  display: flex;
+		  align-items: center;
+		  margin-bottom: 15px;
+		}
+		.card-header img {
+		  width: 30px;
+		  height: 30px;
+		  border-radius: 50%;
+		  margin-right: 10px;
+		}
+		.title {
+		  font-size: 18px;
+		  font-weight: bold;
+		}
+		.info {
+		  flex: 2;
+		  display: flex;
+		  max-width: 500px;
+		  flex-direction: column;
+		}
+		.buffs {
+		  flex: 1;
+		  border-left: 2px solid #ccc;
+		  padding-left: 15px;
+		}
+		.buff-positive, .length-positive {
+		  color: #4caf50;
+		  font-weight: bold;
+		}
+		.buff-negative, .length-negative {
+		  color: #e53935;
+		  font-weight: bold;
+		}
+	</style>
+</head>
+<body>
+	<div class="card">
+		<div class="info">
+			<div class="card-header">
+				<img src="{{ avatar }}" alt="{{ name }}" />
+				<span class="title">{{ name }}の牛牛信息</span>
+			</div>
+			<span><b>排名:</b> #{{ rank }}</span><br>
+			<span><b>性别:</b> {{ '♂️' if my_length > 0 else '♀️' }}</span><br>
+			<span>
+				<b>{{ '深' if my_length < 0 else '长' }}度:</b>
+				<span class="{{ 'length-negative' if my_length < 0 else 'length-positive' }}"> {{ my_length | abs if my_length < 0 else my_length }}cm </span>
+			</span><br>
+			<span><b>上次打胶时间:</b> {{ latest_gluing_time }}</span><br>
+			<span><b>备注:</b> {{ comment }}</span><br>
+		</div>
+		{% if buff.name != "None" %}
+		<div class="buffs">
+			<span class="title">Buff 状态</span>
+			<p class="{{ 'buff-positive' if buff.glue_effect > 1 else 'buff-negative' }}"><b>{{ buff.name }}</b></p>
+			<p><b>击剑胜率倍率:</b> x{{ buff.fencing_weight }}</p>
+			<p><b>打胶倍率:</b> x{{ buff.glue_effect }}</p>
+			<p><b>负面事件倍率:</b> x{{ buff.glue_negative_weight }}</p>
+			<p><b>⏳ 剩余时间:</b> {{ (buff.expire_time - now) | round(1) }}s</p>
+		</div>
+		{% endif %}
+	</div>
+</body>
 </html>

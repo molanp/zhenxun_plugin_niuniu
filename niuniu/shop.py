@@ -1,4 +1,6 @@
 import time
+from nonebot import require
+require("nonebot_plugin_uninfo")
 
 from nonebot_plugin_uninfo import Uninfo
 

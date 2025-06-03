@@ -122,7 +122,7 @@ async def use_prop(uid: str, prop_name: str) -> str:
     # 更新道具状态
     await UserState.update("buff_map", uid, prop)
 
-    return f"使用了 {prop.name}，效果持续至 {time.ctime(expire_time)}"
+    return f"使用了 {prop.name}，效果持续至 {time.ctime(prop.expire_time)}"
 
 
 async def adjust_glue_effects(uid: str) -> dict[str, GlueEvent]:
@@ -149,6 +149,7 @@ async def get_buffs(uid: str) -> PropModel:
     :return: 用户的 buff 信息（未过期）或 None
     """
     # 获取 buff 信息
+    uid = str(uid)
     buff_info = await UserState.get("buff_map", uid)
 
     # 如果 buff 存在且未过期

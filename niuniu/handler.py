@@ -5,7 +5,9 @@ import random
 import time
 
 import aiofiles
-from nonebot import get_driver
+from nonebot import get_driver, require
+require("nonebot_plugin_alconna")
+require("nonebot_plugin_uninfo")
 from nonebot_plugin_alconna import (
     Alconna,
     Args,
@@ -37,7 +39,7 @@ from .database import Sqlite
 from .fence import Fencing
 from .model import NiuNiuUser
 from .niuniu import NiuNiu
-from .niuniu_goods.event_manager import process_glue_event
+from .niuniu_goods.event_manager import process_glue_event, get_buffs
 from .utils import UserState, get_name
 
 niuniu_register = on_alconna(
@@ -224,7 +226,7 @@ async def _(session: Uninfo, p: Arparma):
 
 @niuniu_my.handle()
 async def _(session: Uninfo):
-    uid = int(session.user.id)
+    uid = session.user.id
     if await NiuNiu.get_length(uid) is None:
         await niuniu_my.send(
             Text("你还没有牛牛呢！\n请发送'注册牛牛'领取你的牛牛!"), reply_to=True
@@ -242,7 +244,7 @@ async def _(session: Uninfo):
 
     # 构造结果数据
     user = {"uid": current_user.uid, "length": current_user.length, "rank": rank}
-    avatar = await PlatformUtils.get_user_avatar(str(uid), "qq", session.self_id)
+    avatar = await PlatformUtils.get_user_avatar(uid, "qq", session.self_id)
     avatar = "" if avatar is None else base64.b64encode(avatar).decode("utf-8")
 
     result = {
@@ -252,6 +254,8 @@ async def _(session: Uninfo):
         "my_length": user["length"],
         "latest_gluing_time": await NiuNiu.latest_gluing_time(uid),
         "comment": await NiuNiu.comment(user["length"]),
+        "buff": await get_buffs(uid),
+        "now": time.time()
     }
     template_dir = Path(__file__).resolve().parent / "templates"
     pic = await template_to_pic(

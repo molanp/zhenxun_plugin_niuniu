@@ -9,11 +9,11 @@ from zhenxun.services.db_context import Model
 class NiuNiuUser(Model):
     id = fields.IntField(pk=True, generated=True, auto_increment=True)
     """自增id"""
-    uid = fields.TextField(description="用户唯一标识符")
+    uid = fields.CharField(255, description="用户唯一标识符")
     """用户id"""
     length = fields.FloatField(description="用户长度")
     """用户长度"""
-    sex = fields.TextField(description="用户性别", default="boy")
+    sex = fields.CharField(255, description="用户性别", default="boy")
     """用户性别"""
     time = fields.DatetimeField(auto_now_add=True)
     """创建时间"""
