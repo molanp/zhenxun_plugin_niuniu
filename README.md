@@ -1,8 +1,7 @@
 > [!NOTE]
 > 
-> **寻求合作者**
+> 本插件的道具部分依赖了[#1877](https://github.com/zhenxun-org/zhenxun_bot/pull/1877)中的变更，请确保你已修改对应的文件
 > 
-> 因学业繁忙，维护此插件较为困难，现寻求合作者一同维护
 
 # zhenxun_plugin_niuniu
 真寻群内小游戏插件-牛牛大作战
