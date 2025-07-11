@@ -51,7 +51,7 @@ class NiuNiuRecord(Model):
     """自增id"""
     uid = fields.CharField(255, description="用户唯一标识符")
     """用户id"""
-    action = fields.TextField(description="动作名称")
+    action = fields.CharField(255, description="动作名称")
     """动作名称"""
     origin_length = fields.FloatField(description="操作前长度")
     """操作前长度"""
