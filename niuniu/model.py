@@ -49,7 +49,7 @@ class NiuNiuUser(Model):
 class NiuNiuRecord(Model):
     id = fields.IntField(pk=True, generated=True, auto_increment=True)
     """自增id"""
-    uid = fields.TextField(description="用户唯一标识符")
+    uid = fields.CharField(255, description="用户唯一标识符")
     """用户id"""
     action = fields.TextField(description="动作名称")
     """动作名称"""
